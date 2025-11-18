@@ -1,4 +1,4 @@
-# Bash Scripts for Bacterial Genome Assembly
+# Bash Scripts for Shotgun Metagenome Analysis
 
 This repository contains a collection of command-lines and **Bash scripts** essential for metagenome **analysis from short paired-end reads (Illumina)**.
 
@@ -74,5 +74,6 @@ It also includes detailed instructions for the installation of all necessary sof
     * AMRFinderPlus
     * VIBRANT
     * MOB-suite 
+
 
 

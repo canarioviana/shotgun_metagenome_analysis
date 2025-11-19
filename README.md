@@ -72,8 +72,11 @@ It also includes detailed instructions for the installation of all necessary sof
     * dbCAN
     * DeepGOPlus
     * AMRFinderPlus
-    * VIBRANT
+12) Bin mobile elements
     * MOB-suite 
+    * VIBRANT
+
+
 
 
 

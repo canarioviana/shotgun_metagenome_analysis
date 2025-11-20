@@ -37,10 +37,10 @@ It also includes detailed instructions for the installation of all necessary sof
     * Bwa-mem2 mapping
     * Bwa-mem2 reads
     * FastQC
-    * FastQC -> MultiQC
+    * MultiQC
 6) Taxonomic abundance profile
     * Kraken
-    * Bracken
+    * Kraken -> Bracken
     * Bracken -> Krona
     * Bracken -> Comparison
     * MetaPhlAn
@@ -50,7 +50,7 @@ It also includes detailed instructions for the installation of all necessary sof
     * QUAST
 8) Functional abundance profile
     * Barrnap
-    * tRNAscan-SE
+    * Aragorn
     * Pyrodigal
     * eggNOG-mapper
     * dbCAN
@@ -75,6 +75,7 @@ It also includes detailed instructions for the installation of all necessary sof
 12) Bin mobile elements
     * MOB-suite 
     * VIBRANT
+
 
 
 

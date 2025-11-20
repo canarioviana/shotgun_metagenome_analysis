@@ -18,7 +18,7 @@ It also includes detailed instructions for the installation of all necessary sof
 
 ---
 
-## 🛠️ The Short Paired-End Reads Genome Assembly Workflow
+## 🛠️ The Shotgun Metagenome Analysis Workflow
 
 1) Reads files and renaming
     * Reads stored as local files

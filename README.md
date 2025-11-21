@@ -60,7 +60,7 @@ It also includes detailed instructions for the installation of all necessary sof
     * Bwa-mem2 index
     * Bwa-mem2 mapping
     * SemiBin
-9B) Binning (Single or Multi-sample. Self-supervised mode)
+9B) Binning (Single or Multi-sample)
     * SemiBin concatenate_fasta
     * Bwa-mem2 index
     * Bwa-mem2 mapping
@@ -80,6 +80,7 @@ It also includes detailed instructions for the installation of all necessary sof
 12) Bin mobile elements
     * MOB-suite 
     * VIBRANT
+
 
 
 

@@ -56,7 +56,7 @@ It also includes detailed instructions for the installation of all necessary sof
     * dbCAN
     * AMRFinderPlus
     * VIBRANT 
-9) Binning (Single-Sample or Single/Multi-sample)
+9) Binning
     * Method A - Single-sample: Bwa-mem2 index
     * Method A - Single-sample: Bwa-mem2 mapping
     * Method A - Single-sample: SemiBin

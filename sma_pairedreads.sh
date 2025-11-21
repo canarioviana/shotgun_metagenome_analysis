@@ -1,7 +1,7 @@
 # Bash script for shotgun metagenome analysis from short-read sequencing data
 #
 # Author: Marcus Vinicius Canário Viana
-# Date: 19/11/2025
+# Date: 21/11/2025
 # More info: see README.md in the repository
 #
 # Instructions:
@@ -49,10 +49,15 @@
     # 8.5) dbCAN
     # 8.6) AMRFinderPlus
     # 8.7) VIBRANT
-## 9) Binning (Single-sample only)
+## 9A) Binning (Single-sample only)
     # 9.1) Bwa-mem2 index
     # 9.2) Bwa-mem2 mapping
     # 9.3) SemiBin
+## 9B) Binning (Single or Multi-sample. Self-supervised mode)
+    # 9.1) SemiBin concatenate_fasta
+    # 9.2) Bwa-mem2 index
+    # 9.3) Bwa-mem2 mapping
+    # 9.4) Semibin binning
 ## 10) Bin quality control
     # 10.1) QUAST
     # 10.2) CheckM2
@@ -96,7 +101,7 @@ rm -f 1_reads_single-end.tsv
 
 # Verify the presence of the file 1_reads_accessions.tsv with a list of accessions
 if [ -f 1_reads_accessions.tsv ]; then
-    echo "The file 1_reads_accessions.tsv was found. The sequencing reads will be downloaded."
+    echo "1) The file 1_reads_accessions.tsv was found. The sequencing reads will be downloaded."
 
     # Create output directory 
     mkdir -p 1_reads
@@ -106,13 +111,14 @@ if [ -f 1_reads_accessions.tsv ]; then
     conda activate sra-tools
 
     # Loop through file lines
+    tr -d '\r' < 1_reads_accessions.tsv |  awk '1'| \
     while IFS=$'\t' read -r accession sample others; do
         if [ -f "1_reads/${sample}_1.fq.gz" ] && [ -f "1_reads/${sample}_2.fq.gz" ]; then
-            echo "Sample $sample paired files found. Skipping download."
+            echo "1) Sample $sample paired files found. Skipping download."
         elif [ -f "1_reads/${sample}.fq.gz" ]; then
-            echo "Sample $sample single-end file found. Skipping download."
+            echo "1) Sample $sample single-end file found. Skipping download."
         else
-            echo "Downloading sample: $sample (accession: $accession)"
+            echo "1) Downloading sample: $sample (accession: $accession)"
 
             # Remove any incomplete files
             rm -f "1_reads/${sample}_1.fq.gz" "1_reads/${sample}_2.fq.gz" "1_reads/${sample}.fq.gz"    
@@ -135,33 +141,33 @@ if [ -f 1_reads_accessions.tsv ]; then
 
             # Check if the reads are paired-end
             if [ -f "${accession}_1.fastq.gz" ] && [ -f "${accession}_2.fastq.gz" ];  then
-                echo "Sample ${sample} has paired-end reads."
+                echo "1) Sample ${sample} has paired-end reads."
                 # Rename files
-                echo "Renaming files."
+                echo "1) Renaming files."
                 mv "${accession}_1.fastq.gz" "${sample}_1.fq.gz"
                 mv "${accession}_2.fastq.gz" "${sample}_2.fq.gz"
                 # Go back to main directory
                 cd ..
             # Check if the reads are not paired-end
             elif [ -f "${accession}.fastq.gz" ]; then
-                echo "Sample ${sample} has single-end reads."
+                echo "1) Sample ${sample} has single-end reads."
                 # Renaming file
-                echo "Renaming file."
+                echo "1) Renaming file."
                 mv "${accession}.fastq.gz" "${sample}.fq.gz"
                 # Warning about the requirement of paired-reads
-                echo "Warning: this script only use paired-end reads. This file will not be used." 
+                echo "1) Warning: this script only use paired-end reads. This file will not be used." 
                 # Create list of not used read files
                 echo -e "${accession}\t${sample}.fq.gz" >> ../1_reads_single-end.tsv
                 # Go back to main directory
                 cd ..
             fi
         fi
-    done < 1_reads_accessions.tsv
-    echo "Download process complete. Deactivating the environment."
+    done
+    echo "1) Download process complete. Deactivating the environment."
     # Deactivate Conda environment
     conda deactivate
 else
-    echo "The file 1_reads_accessions.tsv was not found. Proceeding using local files."
+    echo "1) The file 1_reads_accessions.tsv was not found. Proceeding using local files."
 fi
 
 
@@ -258,9 +264,9 @@ for r1 in 1_reads/*_1.fq.gz; do
     sample=${r1filename%%_*}
    
     # Inform current sample
-    echo "Fastp is processing sample: ${sample} (${i}/${sample_count})"
-    echo "Read 1 file: ${r1}"
-    echo "Read 2 file: ${r2}"
+    echo "3) Fastp is processing sample: ${sample} (${i}/${sample_count})"
+    echo "3) Read 1 file: ${r1}"
+    echo "3) Read 2 file: ${r2}"
     # Start counting the running time
     start_time=$SECONDS
 
@@ -287,7 +293,7 @@ for r1 in 1_reads/*_1.fq.gz; do
     elapsed_time=$((SECONDS - $start_time))
     running_time=$(date -u -d "@$elapsed_time" +"%H:%M:%S")
     # Show the running time
-    echo "$workflow_step for sample $sample: running time ${running_time}. Finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
+    echo "$workflow_step for sample $sample: running time ${running_time} (Finished at $(date +'%Y-%m-%d %H:%M:%S'))" | tee -a 0_workflow_progress.txt
     i=$((i + 1))
 done
 # Deactivate Conda environment
@@ -445,12 +451,13 @@ mkdir -p 5_bwa_index
 # Activate Conda environment
 conda activate bwa-mem2
 # Loop through a list of file lines (Species as index name)
-awk '1' 5_ref_ids.tsv | while IFS=$'\t' read -r ref_accession ref_name others; do
+tr -d '\r' < 5_ref_ids.tsv | awk '1'| \
+while IFS=$'\t' read -r ref_accession ref_name others; do
     # Create output directory
     mkdir -p 5_bwa_index/${ref_name}
 
     # Inform current sample
-    echo "Bwa-mem2 index is processing reference: ${ref_name}"
+    echo "5) Bwa-mem2 index is processing reference: ${ref_name}"
     # Start counting the running time
     start_time=$SECONDS
 
@@ -511,10 +518,11 @@ sample_count=$(awk 'END {print NR}' 5_metagenomes.tsv)
 # Activate conda environment
 conda activate bwa-mem2
 # Loop through a list of file lines
-awk '1' 5_metagenomes.tsv | while IFS=$'\t' read -r sample ref_accession ref_name isolation_source others; do
-    
+tr -d '\r' < 5_metagenomes.tsv |  awk '1' | \
+while IFS=$'\t' read -r sample ref_accession ref_name isolation_source others; do
     # Inform current sample
-    echo "Bwa-mem2 is processing sample: ${sample} (${i}/${sample_count})"
+    echo "5) Bwa-mem2 is processing sample ${sample} from ${ref_name}:
+    3 (${i}/${sample_count})"
     # Start counting the running time
     start_time=$SECONDS
 
@@ -526,7 +534,7 @@ awk '1' 5_metagenomes.tsv | while IFS=$'\t' read -r sample ref_accession ref_nam
     "3_fastp/${sample}_trimmed_2.fq.gz" \
     2> "5_bwa_reads/${sample}_alignment.log" \
     | tee >(samtools flagstat - > "5_bwa_reads/${sample}_nofilter_flagstat.txt") \
-    | samtools view -b -f 12 -@ $(nproc --ignore=1) - \
+    | samtools view -h -b -f 12 -@ $(nproc --ignore=1) - \
     | tee >(samtools flagstat - > "5_bwa_reads/${sample}_hostfilter_flagstat.txt") \
     | samtools sort -n -@ $(nproc --ignore=1) - \
     | samtools fastq \
@@ -541,7 +549,7 @@ awk '1' 5_metagenomes.tsv | while IFS=$'\t' read -r sample ref_accession ref_nam
     elapsed_time=$((SECONDS - $start_time))
     running_time=$(date -u -d "@$elapsed_time" +"%H:%M:%S")
     # Show the running time
-    echo "$workflow_step for sample $sample: running time ${running_time}. Finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
+    echo "$workflow_step for sample $sample: running time ${running_time} (Finished at $(date +'%Y-%m-%d %H:%M:%S'))" | tee -a 0_workflow_progress.txt
     i=$((i + 1))
 done
 # Deactivate Conda environment
@@ -639,7 +647,7 @@ for r1 in 5_bwa_reads/*_1.fq.gz; do
     sample=${filename%%_*}
 
     # Inform current sample
-    echo "Kraken is processing sample: ${sample} (${i}/${sample_count})"
+    echo "6) Kraken is processing sample: ${sample} (${i}/${sample_count})"
     # Start counting the running time
     start_time=$SECONDS
     
@@ -658,7 +666,7 @@ for r1 in 5_bwa_reads/*_1.fq.gz; do
     elapsed_time=$((SECONDS - $start_time))
     running_time=$(date -u -d "@$elapsed_time" +"%H:%M:%S")
     # Show the running time
-    echo "$workflow_step for sample $sample: running time ${running_time}. Finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
+    echo "$workflow_step for sample $sample: running time ${running_time} (Finished at $(date +'%Y-%m-%d %H:%M:%S'))" | tee -a 0_workflow_progress.txt
     i=$((i + 1))
 done
 # Deactivate Conda environment
@@ -713,7 +721,7 @@ for file in 6_kraken_report/*_kreport.tsv; do
     sample=${filename%%_*}
 
     # Inform current sample
-    echo "Bracken is processing sample: ${sample} (${i}/${sample_count})"
+    echo "6) Bracken is processing sample: ${sample} (${i}/${sample_count})"
     # Start counting the running time
     start_time=$SECONDS
 
@@ -744,7 +752,7 @@ for file in 6_kraken_report/*_kreport.tsv; do
     elapsed_time=$((SECONDS - $start_time))
     running_time=$(date -u -d "@$elapsed_time" +"%H:%M:%S")
     # Show the running time
-    echo "$workflow_step for sample $sample: running time ${running_time}. Finished at $(date +'%Y-%m-%d %H:%M:%S')"
+    echo "$workflow_step for sample $sample: running time ${running_time} (Finished at $(date +'%Y-%m-%d %H:%M:%S'))"
     i=$((i + 1))
 done
 # Deactivate Conda environment
@@ -785,7 +793,7 @@ for file in 6_bracken_report/*_breport.tsv; do
     sample=${filename%%_*}
 
     # Inform current sample
-    echo "Generating Krona graphs for sample ${sample} (${i}/${sample_count})"
+    echo "6) Generating Krona graphs for sample ${sample} (${i}/${sample_count})"
 
     # Generate .txt file
     kreport2krona.py \
@@ -857,7 +865,7 @@ END {
     for (source in samples_by_source) {
         print source "\t" samples_by_source[source];
     }
-}' "$input_file" |
+}' "$input_file" | tr -d '\r' |
 # Loop through each group
 while IFS=$'\t' read -r source sample_list; do
     # Split the comma-separated sample list into a shell array
@@ -930,7 +938,7 @@ for r1 in 5_bwa_reads/*_1.fq.gz; do
     sample=${filename%%_*}
 
     # Inform current sample
-    echo "MetaPhlAn is processing sample: ${sample} (${i}/${sample_count})"
+    echo "6) MetaPhlAn is processing sample: ${sample} (${i}/${sample_count})"
     # Start counting the running time
     start_time=$SECONDS
 
@@ -948,7 +956,7 @@ for r1 in 5_bwa_reads/*_1.fq.gz; do
     elapsed_time=$((SECONDS - $start_time))
     running_time=$(date -u -d "@$elapsed_time" +"%H:%M:%S")
     # Show the running time
-    echo "$workflow_step for sample $sample: running time ${running_time}. Finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
+    echo "$workflow_step for sample $sample: running time ${running_time} (Finished at $(date +'%Y-%m-%d %H:%M:%S'))" | tee -a 0_workflow_progress.txt
     i=$((i + 1))
 done
 # Deactivate Conda environment
@@ -998,7 +1006,7 @@ END {
     for (source in samples_by_source) {
         print source "\t" samples_by_source[source];
     }
-}' "$input_file" |
+}' "$input_file" | tr -d '\r' |
 # Loop through each group
 while IFS=$'\t' read -r source sample_list; do
     # Split the comma-separated sample list into a shell array
@@ -1015,11 +1023,11 @@ while IFS=$'\t' read -r source sample_list; do
             input_files_array+=("6_metaphlan/${sample}_mprofile.txt")
         done
         # Run the script
-        echo "Merging Metaphlan abundance tables for ${source} (${num_samples} samples):"
+        echo "6) Merging Metaphlan abundance tables for ${source} (${num_samples} samples):"
         merge_metaphlan_tables.py "${input_files_array[@]}" \
         > "6_metaphlan_comparison/merged_${source}_mprofile.txt"
     else
-        echo "⚠️ Skipping Metaphlan merge for ${source}: only ${num_samples} sample(s) found (minimum 2 required)."
+        echo "6) ⚠️ Skipping Metaphlan merge for ${source}: only ${num_samples} sample(s) found (minimum 2 required)."
         echo "${source}" > 6_metaphlan_comparison_skiped_soruces.tsv
     fi
 done
@@ -1104,7 +1112,7 @@ for r1 in 5_bwa_reads/*_1.fq.gz; do
     sample=${filename%%_*}
 
     # Inform current sample
-    echo "MEGAHIT is assembling sample: $sample (${i}/${sample_count})"
+    echo "7) MEGAHIT is assembling sample: $sample (${i}/${sample_count})"
     # Start counting the running time
     start_time=$SECONDS
 
@@ -1129,7 +1137,7 @@ for r1 in 5_bwa_reads/*_1.fq.gz; do
     elapsed_time=$((SECONDS - $start_time))
     running_time=$(date -u -d "@$elapsed_time" +"%H:%M:%S")
     # Show the running time
-    echo "$workflow_step for sample $sample: running time ${running_time}. Finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
+    echo "$workflow_step for sample $sample: running time ${running_time} (Finished at $(date +'%Y-%m-%d %H:%M:%S'))" | tee -a 0_workflow_progress.txt
     i=$((i + 1))
 done
 # Deactivate Conda environment
@@ -1148,7 +1156,7 @@ echo "$workflow_step step finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_w
 ## 7.2) QUAST
 
 # Software name for tracking progress in 0_workflow_progress.txt
-workflow_step="7) MEGAHIT -> QUAST"
+workflow_step="7) QUAST"
 # Update the file 0_workflow_progress.txt
 echo "$workflow_step step started at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
 
@@ -1217,7 +1225,7 @@ for file in 7_megahit/*.fasta; do
     sample=${filename%%_*}
 
     # Inform current sample
-    echo "Barrnap is processing sample: ${sample} (${i}/${sample_count})"
+    echo "8) Barrnap is processing sample: ${sample} (${i}/${sample_count})"
     # Start counting the running time
     start_time=$SECONDS
 
@@ -1245,7 +1253,7 @@ for file in 7_megahit/*.fasta; do
     elapsed_time=$((SECONDS - $start_time))
     running_time=$(date -u -d "@$elapsed_time" +"%H:%M:%S")
     # Show the running time
-    echo "$workflow_step for sample $sample: running time ${running_time}. Finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
+    echo "$workflow_step for sample $sample: running time ${running_time} (Finished at $(date +'%Y-%m-%d %H:%M:%S'))" | tee -a 0_workflow_progress.txt
     i=$((i + 1))
 done
 # Deactivate Conda environment
@@ -1286,7 +1294,7 @@ for file in 7_megahit/*.fasta; do
     sample=${filename%%_*}
 
     # Inform current sample
-    echo "Aragorn is processing sample: ${sample} (${i}/${sample_count})"
+    echo "8) Aragorn is processing sample: ${sample} (${i}/${sample_count})"
     # Start counting the running time
     start_time=$SECONDS
 
@@ -1302,7 +1310,7 @@ for file in 7_megahit/*.fasta; do
     elapsed_time=$((SECONDS - $start_time))
     running_time=$(date -u -d "@$elapsed_time" +"%H:%M:%S")
     # Show the running time
-    echo "$workflow_step for sample $sample: running time ${running_time}. Finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
+    echo "$workflow_step for sample $sample: running time ${running_time} (Finished at $(date +'%Y-%m-%d %H:%M:%S'))" | tee -a 0_workflow_progress.txt
     i=$((i + 1))
 done
 # Deactivate Conda environment
@@ -1342,7 +1350,7 @@ for file in 7_megahit/*.fasta; do
     sample=${filename%%_*}
 
     # Inform current sample
-    echo "Pyrodigal is processing sample: ${sample} (${i}/${sample_count})"
+    echo "8) Pyrodigal is processing sample: ${sample} (${i}/${sample_count})"
     # Start counting the running time
     start_time=$SECONDS
 
@@ -1367,7 +1375,7 @@ for file in 7_megahit/*.fasta; do
     elapsed_time=$((SECONDS - $start_time))
     running_time=$(date -u -d "@$elapsed_time" +"%H:%M:%S")
     # Show the running time
-    echo "$workflow_step for sample $sample: running time ${running_time}. Finished at $(date +'%Y-%m-%d %H:%M:%S')"
+    echo "$workflow_step for sample $sample: running time ${running_time} (Finished at $(date +'%Y-%m-%d %H:%M:%S'))"
     i=$((i + 1))
 done
 # Deactivate Conda environment
@@ -1408,7 +1416,7 @@ for file in 8_pyrodigal/*/*.faa; do
     sample=${filename%%.faa}
     
     # Inform current sample
-    echo "eggNOG-mapper is processing sample: ${sample} (${i}/${sample_count})"
+    echo "8) eggNOG-mapper is processing sample: ${sample} (${i}/${sample_count})"
     # Start counting the running time
     start_time=$SECONDS
 
@@ -1430,7 +1438,7 @@ for file in 8_pyrodigal/*/*.faa; do
     elapsed_time=$((SECONDS - $start_time))
     running_time=$(date -u -d "@$elapsed_time" +"%H:%M:%S")
     # Show the running time
-    echo "$workflow_step for sample $sample: running time ${running_time}. Finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
+    echo "$workflow_step for sample $sample: running time ${running_time} (Finished at $(date +'%Y-%m-%d %H:%M:%S'))" | tee -a 0_workflow_progress.txt
     i=$((i + 1))
 done
 # Deactivate Conda environment
@@ -1471,7 +1479,7 @@ for file in 8_pyrodigal/*/*.faa; do
     sample=${filename%%.faa}
     
     # Inform current sample
-    echo "dbCAN is processing sample: ${sample} (${i}/${sample_count})"
+    echo "8) dbCAN is processing sample: ${sample} (${i}/${sample_count})"
     # Start counting the running time
     start_time=$SECONDS
 
@@ -1490,7 +1498,7 @@ for file in 8_pyrodigal/*/*.faa; do
     elapsed_time=$((SECONDS - $start_time))
     running_time=$(date -u -d "@$elapsed_time" +"%H:%M:%S")
     # Show the running time
-    echo "$workflow_step for sample $sample: running time ${running_time}. Finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
+    echo "$workflow_step for sample $sample: running time ${running_time} (Finished at $(date +'%Y-%m-%d %H:%M:%S'))" | tee -a 0_workflow_progress.txt
     i=$((i + 1))
 done
 # Deactivate Conda environment
@@ -1532,7 +1540,7 @@ for file in 8_pyrodigal/*/*.faa; do
     sample=${filename%%.faa}
     
     # Inform current sample
-    echo "AMRFinderPlus is processing sample: ${sample} (${i}/${sample_count})"
+    echo "8) AMRFinderPlus is processing sample: ${sample} (${i}/${sample_count})"
     # Start counting the running time
     start_time=$SECONDS
 
@@ -1577,7 +1585,7 @@ for file in 8_pyrodigal/*/*.faa; do
     elapsed_time=$((SECONDS - $start_time))
     running_time=$(date -u -d "@$elapsed_time" +"%H:%M:%S")
     # Show the running time
-    echo "$workflow_step for sample $sample: running time ${running_time}. Finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
+    echo "$workflow_step for sample $sample: running time ${running_time} (Finished at $(date +'%Y-%m-%d %H:%M:%S'))" | tee -a 0_workflow_progress.txt
     i=$((i + 1))
 done
 # Deactivate Conda environment
@@ -1596,7 +1604,7 @@ echo "$workflow_step step finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_w
 ## 8.7) VIBRANT
 
 # Software name for tracking progress in 0_workflow_progress.txt
-workflow_step="8) MEGAHIT -> VIBRANT"
+workflow_step="8) VIBRANT"
 # Update the file 0_workflow_progress.txt
 echo "$workflow_step step started at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
 
@@ -1617,7 +1625,7 @@ for file in 7_megahit/*.fasta; do
     sample=${filename%%_*}
     
     # Inform current sample
-    echo "VIBRANT is processing sample: ${sample} (${i}/${sample_count})"
+    echo "8) VIBRANT is processing sample: ${sample} (${i}/${sample_count})"
     # Start counting the running time
     start_time=$SECONDS
 
@@ -1636,7 +1644,7 @@ for file in 7_megahit/*.fasta; do
     elapsed_time=$((SECONDS - $start_time))
     running_time=$(date -u -d "@$elapsed_time" +"%H:%M:%S")
     # Show the running time
-    echo "$workflow_step for sample $sample: running time ${running_time}. Finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
+    echo "$workflow_step for sample $sample: running time ${running_time} (Finished at $(date +'%Y-%m-%d %H:%M:%S'))" | tee -a 0_workflow_progress.txt
     i=$((i + 1))
 done
 # Deactivate Conda environment
@@ -1653,8 +1661,24 @@ echo "$workflow_step step finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_w
 
 
 ############################################################
-# 9) Binning (Single-sample only)
+# 9A) Binning (Single-sample only)
 ############################################################
+
+# The default method of binning in this session uses human gut model
+# You can change the model in step 9.3
+# You can change the SemiBin parameter "--environment" to one of the following
+# human_gut
+# dog_gut
+# ocean
+# soil
+# cat_gut
+# human_oral
+# mouse_gut
+# pig_gut
+# built_environment
+# wastewater
+# chicken_caecum
+# global
 
 ############################################################
 ## 9.1) Bwa-mem2 index
@@ -1681,7 +1705,7 @@ for file in 7_megahit/*.fasta; do
     # Create output directory
     mkdir -p "9_bwa_index/${sample}"
     # Inform current sample
-    echo "Bwa-mem2 index is processing sample: ${sample} (${i}/${sample_count})"
+    echo "9) Bwa-mem2 index is processing sample: ${sample} (${i}/${sample_count})"
     # Start counting the running time
     start_time=$SECONDS
 
@@ -1694,7 +1718,7 @@ for file in 7_megahit/*.fasta; do
     elapsed_time=$((SECONDS - $start_time))
     running_time=$(date -u -d "@$elapsed_time" +"%H:%M:%S")
     # Show the running time
-    echo "$workflow_step for sample $sample: running time ${running_time}. Finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
+    echo "$workflow_step for sample $sample: running time ${running_time} (Finished at $(date +'%Y-%m-%d %H:%M:%S'))" | tee -a 0_workflow_progress.txt
 done
 # Deactivate Conda environment
 conda deactivate
@@ -1734,7 +1758,7 @@ for dir in 9_bwa_index/*/; do
     sample=${dirname%%/}
 
     # Inform current sample
-    echo "Bwa-mem2 is processing sample: ${sample} (${i}/${sample_count})"
+    echo "9) Bwa-mem2 is processing sample: ${sample} (${i}/${sample_count})"
     # Start counting the running time
     start_time=$SECONDS
 
@@ -1742,8 +1766,8 @@ for dir in 9_bwa_index/*/; do
     bwa-mem2 mem \
         -t $(nproc --ignore=1) \
         "9_bwa_index/${sample}/${sample}" \
-        "5_bwa_reads/${sample}_trimmed_nohost_1.fq.gz" \
-        "5_bwa_reads/${sample}_trimmed_nohost_2.fq.gz" \
+        5_bwa_reads/"${sample}"*_1.fq.gz \
+        5_bwa_reads/"${sample}"*_2.fq.gz \
         2> "9_bwa_mapping/${sample}_alignment.log" \
     | tee >(samtools flagstat - > "9_bwa_mapping/${sample}_allreads_flagstat.txt") \
     | samtools view -b -h -F 4 -@ $(nproc --ignore=1) - \
@@ -1791,7 +1815,7 @@ for dir in 9_bwa_index/*/; do
     elapsed_time=$((SECONDS - $start_time))
     running_time=$(date -u -d "@$elapsed_time" +"%H:%M:%S")
     # Show the running time
-    echo "$workflow_step for sample $sample: running time ${running_time}. Finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
+    echo "$workflow_step for sample $sample: running time ${running_time} (Finished at $(date +'%Y-%m-%d %H:%M:%S'))" | tee -a 0_workflow_progress.txt
     i=$((i + 1))
 done
 # Deactivate Conda environment
@@ -1833,29 +1857,29 @@ for file in 7_megahit/*.fasta; do
     sample=${filename%%_*}
     
     # Inform current sample
-    echo "SemiBin is processing sample: ${sample} (${i}/${sample_count})"
+    echo "9) SemiBin is processing sample: ${sample} (${i}/${sample_count})"
     # Start counting the running time
     start_time=$SECONDS
 
     # Create output directory
     mkdir -p "9_semibin/${sample}_semibin"
 
-    # # SemiBin (Easy mode) using short reads mapping, single binning AND HUMAN GUT MODEL (--environment human_gut)
-    # SemiBin2 single_easy_bin \
-    # --threads $(nproc --ignore=1) \
-    # --environment human_gut \
-    # --input-fasta ${file} \
-    # --input-bam "9_bwa_mapping/${sample}.mapped.sorted.bam" \
-    # --output "9_semibin/${sample}_semibin"
-
-    # SemiBin (Easy mode) using short reads mapping, single binning AND SELF TRAINED MODEL (--self-supervised)
-    # Use GPU to reduce the required time to train the models
+    # SemiBin (Easy mode) using short reads mapping, single binning AND HUMAN GUT MODEL (--environment human_gut)
     SemiBin2 single_easy_bin \
     --threads $(nproc --ignore=1) \
-    --self-supervised \
+    --environment human_gut \
     --input-fasta ${file} \
     --input-bam "9_bwa_mapping/${sample}.mapped.sorted.bam" \
     --output "9_semibin/${sample}_semibin"
+
+    # # SemiBin (Easy mode) using short reads mapping, single binning AND SELF-SUPERVISED MODEL (--self-supervised)
+    # # Use GPU to reduce the required time to train the models
+    # SemiBin2 single_easy_bin \
+    # --threads $(nproc --ignore=1) \
+    # --self-supervised \
+    # --input-fasta ${file} \
+    # --input-bam "9_bwa_mapping/${sample}.mapped.sorted.bam" \
+    # --output "9_semibin/${sample}_semibin"
 
     # # SemiBin (Step by step) using short reads mapping and single binning
     # # Generate features (mandatory)
@@ -1879,29 +1903,391 @@ for file in 7_megahit/*.fasta; do
     # --data "9_semibin/${sample}_semibin/data.csv" \
     # --output "9_semibin/${sample}_semibin"
 
-    # Rename and extract bin files
-    # Go to bin directory
-    cd "9_semibin/${sample}_semibin/output_bins"
-    # Rename bin file names
-    rename "s/^SemiBin_/${sample}Bin/" *.fa.gz
-    # Change bin file extentios
-    rename 's/\.fa\.gz$/.fasta\.gz/' *.fa.gz
-    # Move bin files to sample directory
-    mv ${sample}Bin*.fasta.gz ../
-    # Go to main directory
-    cd ../../../
+
+    # Rename, extract and organize bin files
+    # Rename and move bin files
+    for file in 9_semibin/"${sample}"_semibin/output_bins/SemiBin_*.fa.gz; do
+        [ -e "$file" ] || continue
+        filename=$(basename "$file" .fa.gz)
+        newname="${filename/#SemiBin_/${sample}Bin}"
+        mv "$file" 9_semibin/"${sample}"_semibin/"$newname".fasta.gz
+    done
     # Delete intermediate directory
-    rm -r 9_semibin/${sample}_semibin/output_bins
+    rm -r 9_semibin/"${sample}"_semibin/output_bins
 
     # Stop counting the running time
     elapsed_time=$((SECONDS - $start_time))
     running_time=$(date -u -d "@$elapsed_time" +"%H:%M:%S")
     # Show the running time
-    echo "9) $workflow_step for sample $sample: running time ${running_time}. Finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
+    echo "9) $workflow_step for sample $sample: running time ${running_time} (Finished at $(date +'%Y-%m-%d %H:%M:%S'))" | tee -a 0_workflow_progress.txt
     i=$((i + 1))
 done
 # Deactivate Conda environment
 conda deactivate
+
+# Compress directory
+echo "Compressing directory: 9_semibin"
+tar -c --use-compress-program=pigz -f 9_semibin.tar.gz 9_semibin
+# Create checksum file
+md5sum 9_semibin.tar.gz > 9_semibin.tar.gz.md5
+
+# Update the file 0_workflow_progress.txt
+echo "$workflow_step step finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
+
+
+############################################################
+# 9B) Binning - Single/Multi-sample (Self-supervised mode)
+############################################################
+
+# This session uses information from file 5_metagenomes.tsv
+# The information is used to decide to perform single binning (1 sample per isolation source / host) or multi-binning (>= 2 samples per isolation source / host) 
+# The default method of binning in this session uses self-supervised mode
+# Using a GPU is highly recommended. It can reduce the running time from hours to minutes
+
+############################################################
+## 9.1) SemiBin concatenate_fasta
+
+# Software name for tracking progress in 0_workflow_progress.txt
+workflow_step="9) Semibin concatenate_fasta"
+# Update the file 0_workflow_progress.txt
+echo "$workflow_step step started at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
+
+# Create an output directory
+mkdir -p 9_semibin_concatenate
+
+# Activate Conda environment
+conda activate semibin
+# Inform input table
+input_file="5_metagenomes.tsv"
+# awk to group samples by source
+awk 'BEGIN {FS="\t"} 
+{
+    # Concatenate Sample ID ($1) for each Isolaton Source ($4)
+    if (samples_by_source[$4] == "") {
+        samples_by_source[$4] = $1;
+    } else {
+        samples_by_source[$4] = samples_by_source[$4] "," $1;
+    }
+}
+END {
+    # Print the grouped results
+    for (source in samples_by_source) {
+        print source "\t" samples_by_source[source];
+    }
+}' "$input_file" | tr -d '\r' |
+# Loop through each group
+while IFS=$'\t' read -r source sample_list; do
+    # Split the comma-separated sample list into a shell array
+    IFS=',' read -r -a samples_array <<< "$sample_list"
+    # Number of samples
+    num_samples=${#samples_array[@]}
+    # Check if number of samples is 2 or more
+    if [ "$num_samples" -ge 2 ]; then
+        # Declare empty array
+        input_files_array=()
+        # Iterate over all samples and apply the full prefix/suffix
+        for sample in "${samples_array[@]}"; do
+            # Metaphlan input file path: 6_metaphlan/sample_mprofile.txt
+            input_files_array+=("7_megahit/${sample}_megahit.fasta")
+        done
+
+        # Start counting the running time
+        start_time=$SECONDS
+
+        # Inform source and execute the command line
+        echo "9) Concatenating metagenomes from source ${source} (${num_samples} samples):"
+        # Run the script
+        SemiBin2 concatenate_fasta \
+        --input-fasta "${input_files_array[@]}" \
+        --output "9_semibin_concatenate/${source}_concat"
+
+        # Stop counting the running time
+        elapsed_time=$((SECONDS - $start_time))
+        running_time=$(date -u -d "@$elapsed_time" +"%H:%M:%S")
+        # Show the running time
+        echo "9) Concatenation of metagenomes from $source: running time ${running_time}" | tee -a 0_workflow_progress.txt
+
+    else
+        echo "9) ⚠️ Skipping concatenation for ${source}: only ${num_samples} sample(s) found (minimum 2 required)."
+    fi
+done
+
+# Update the file 0_workflow_progress.txt
+echo "$workflow_step step finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
+
+############################################################
+## 9.2) Bwa-mem2 index
+
+# Software name for tracking progress in progress.txt
+workflow_step="9) Bwa-mem2 index"
+echo "$workflow_step step started at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
+
+# Activate conda environment
+conda activate bwa-mem2
+# Inform input table
+input_file="5_metagenomes.tsv"
+# awk to group samples by source
+awk 'BEGIN {FS="\t"} 
+{
+    # Concatenate Sample ID ($1) for each Isolaton Source ($4)
+    if (samples_by_source[$4] == "") {
+        samples_by_source[$4] = $1;
+    } else {
+        samples_by_source[$4] = samples_by_source[$4] "," $1;
+    }
+}
+END {
+    # Print the grouped results
+    for (source in samples_by_source) {
+        print source "\t" samples_by_source[source];
+    }
+}' "$input_file" | tr -d '\r' |
+# Loop through each group
+while IFS=$'\t' read -r source sample_list; do
+    # Split the comma-separated sample list into a shell array
+    IFS=',' read -r -a samples_array <<< "$sample_list"
+    # Number of samples
+    num_samples=${#samples_array[@]}
+    # Check if number of samples is 2 or more
+    if [ "$num_samples" -ge 2 ]; then
+        # Create output directory
+        mkdir -p 9_bwa_index/${source}
+
+        # Start counting the running time
+        start_time=$SECONDS
+
+        # Inform source and execute the command line
+        echo "9) Creating index for concatenated metagenomes from source ${source} (${num_samples} samples):"
+        
+        # Uncompress input file
+        gunzip -k 9_semibin_concatenate/${source}_concat/concatenated.fa.gz
+        # Run main software
+        bwa-mem2 index \
+        -p "9_bwa_index/${source}/${source}" \
+        9_semibin_concatenate/${source}_concat/concatenated.fa
+        # Delete uncompressed input file
+        rm 9_semibin_concatenate/${source}_concat/concatenated.fa
+
+        # Stop counting the running time
+        elapsed_time=$((SECONDS - $start_time))
+        running_time=$(date -u -d "@$elapsed_time" +"%H:%M:%S")
+        # Show the running time
+        echo "9) Create index of concatenated metagenomes from $source: running time ${running_time}" | tee -a 0_workflow_progress.txt
+    elif [ "$num_samples" -eq 1 ]; then
+        # Create output directory
+        mkdir -p 9_bwa_index/${source}
+
+        # Start counting the running time
+        start_time=$SECONDS
+
+        # Inform source and execute the command line
+        echo "9) Creating index for the metagenome from source ${source} (${num_samples} sample):"
+
+        # Run main software
+        bwa-mem2 index \
+        -p "9_bwa_index/${source}/${source}" \
+        "7_megahit/${sample_list}_megahit.fasta"
+
+        # Stop counting the running time
+        elapsed_time=$((SECONDS - $start_time))
+        running_time=$(date -u -d "@$elapsed_time" +"%H:%M:%S")
+        # Show the running time
+        echo "9) Create index of concatenated metagenomes from $source: running time ${running_time}" | tee -a 0_workflow_progress.txt
+
+    else
+        echo "9) ⚠️ Skipping index for ${source}: no sample found (minimum 1 required)."
+    fi
+done
+
+# Update the file 0_workflow_progress.txt
+echo "$workflow_step step finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
+
+############################################################
+## 9.3) Bwa-mem2 mapping
+
+# Software name for tracking progress in progress.txt
+workflow_step="9) Bwa-mem2 mapping"
+echo "$workflow_step step started at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
+
+# Create output directory
+mkdir -p 9_bwa_mapping
+
+# Calculate sample size
+i=1
+sample_count=$(awk 'END {print NR}' 5_metagenomes.tsv)
+
+# Activate conda environment
+conda activate bwa-mem2
+# Loop through a list of file lines
+tr -d '\r' < 5_metagenomes.tsv | awk '1'| \
+while IFS=$'\t' read -r sample ref_accession ref_name isolation_source others; do
+    
+    # Inform current sample
+    echo "9) Bwa-mem2 is processing sample: ${sample} (${i}/${sample_count})"
+    # Start counting the running time
+    start_time=$SECONDS
+
+    # Map the reads to contigs and generate bam file (no intermediate files)
+    bwa-mem2 mem \
+        -t $(nproc --ignore=1) \
+        "9_bwa_index/${isolation_source}/${isolation_source}" \
+        5_bwa_reads/"${sample}"*_1.fq.gz \
+        5_bwa_reads/"${sample}"*_2.fq.gz \
+        2> "9_bwa_mapping/${sample}_alignment.log" \
+    | tee >(samtools flagstat - > "9_bwa_mapping/${sample}_allreads_flagstat.txt") \
+    | samtools view -b -h -F 4 -@ $(nproc --ignore=1) - \
+    | tee >(samtools flagstat - > "9_bwa_mapping/${sample}_mappedreads_flagstat.txt") \
+    | samtools sort -@ $(nproc --ignore=1) \
+        -o "9_bwa_mapping/${sample}.mapped.sorted.bam"
+
+    # Stop counting the running time
+    elapsed_time=$((SECONDS - $start_time))
+    running_time=$(date -u -d "@$elapsed_time" +"%H:%M:%S")
+    # Show the running time
+    echo "$workflow_step for sample $sample: running time ${running_time} (Finished at $(date +'%Y-%m-%d %H:%M:%S'))" | tee -a 0_workflow_progress.txt
+    i=$((i + 1))
+done
+# Deactivate Conda environment
+conda deactivate
+
+# Generate checksum files for the reads
+cd 9_bwa_mapping
+for file in *.bam; do
+    echo "Processing checksum of file: ${file}"
+    md5sum ${file} > ${file}.md5
+done    
+cd ..
+
+# Update the file 0_workflow_progress.txt
+echo "$workflow_step step finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
+
+############################################################
+## 9.4) Semibin binning
+
+# Software name for tracking progress in progress.txt
+workflow_step="9) Semibin binning"
+echo "$workflow_step step started at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
+
+# Create output directory
+mkdir -p 9_semibin
+
+# Activate conda environment
+conda activate semibin
+input_file="5_metagenomes.tsv" 
+# awk to group samples by source
+awk 'BEGIN {FS="\t"} 
+{
+    # Concatenate Sample ID ($1) for each Isolaton Source ($4)
+    if (samples_by_source[$4] == "") {
+        samples_by_source[$4] = $1;
+    } else {
+        samples_by_source[$4] = samples_by_source[$4] "," $1;
+    }
+}
+END {
+    # Print the grouped results
+    for (source in samples_by_source) {
+        print source "\t" samples_by_source[source];
+    }
+}' "$input_file" | tr -d '\r' |
+# Loop through each group
+while IFS=$'\t' read -r source sample_list; do
+    # Split the comma-separated sample list into a shell array
+    IFS=',' read -r -a samples_array <<< "$sample_list"
+    # Number of samples
+    num_samples=${#samples_array[@]}
+    # Check if number of samples is 2 or more
+    if [ "$num_samples" -ge 2 ]; then
+        # Declare empty array
+        input_files_array=()
+        # Iterate over all samples and apply the full prefix/suffix
+        for sample in "${samples_array[@]}"; do
+           input_files_array+=("9_bwa_mapping/${sample}.mapped.sorted.bam")
+        done
+
+        # Inform source and execute the command line
+        echo "9) SemiBin binning samples from ${source} (${num_samples} samples):"
+        # Start counting the running time
+        start_time=$SECONDS
+
+        # Run the script
+        SemiBin2 multi_easy_bin \
+        --threads $(nproc --ignore=1) \
+        --input-fasta "9_semibin_concatenate/${source}_concat/concatenated.fa.gz" \
+        --input-bam ${input_files_array} \
+        --output "9_semibin/${source}_semibin"
+
+        # Organize output files per sampe
+        for sample in "${samples_array[@]}"; do
+            # Create sample directory
+            mkdir 9_semibin/"${sample}"_semibin
+
+            # Rename, extract and organize bin files
+            # Rename and move bin files
+            for file in 9_semibin/"${source}"_semibin/samples/"${sample}"_megahit/output_bins/*.fa.gz; do
+                [ -e "$file" ] || continue
+                filename=$(basename "$file" .fa.gz)
+                newname="${filename/#SemiBin_/${sample}Bin}"
+                mv "$file" 9_semibin/"${sample}"_semibin/"$newname".fasta.gz
+            done
+            # Move other bin files to sample directory
+            mv 9_semibin/"${source}"_semibin/samples/"${sample}"_megahit/*.csv \
+            9_semibin/"${source}"_semibin/samples/"${sample}"_megahit/*.pt \
+            9_semibin/"${source}"_semibin/samples/"${sample}"_megahit/*.tsv \
+            9_semibin/"${sample}"_semibin
+        done
+
+        # Move contacenated coverage file to 9_semibin/
+        for concatcovfile in 9_semibin/"${source}"_semibin/samples/*.mapped.sorted.bam_0_data_cov.csv; do
+            [ -e "$concatcovfile" ] || continue
+            mv "$concatcovfile" 9_semibin/"${source}".mapped.sorted.bam_0_data_cov.csv
+        done
+
+        # Delete intermediate directory
+        rm -r "9_semibin/${source}_semibin"
+
+        # Stop counting the running time
+        elapsed_time=$((SECONDS - $start_time))
+        running_time=$(date -u -d "@$elapsed_time" +"%H:%M:%S")
+        # Show the running time
+        echo "9) Binning of metagenomes from ${source}: running time ${running_time}" | tee -a 0_workflow_progress.txt
+    elif [ "$num_samples" -eq 1 ]; then
+        # Inform sample and source and execute the command line
+        echo "9) SemiBin binning sample from ${source} (${num_samples} sample):"
+        # Start counting the running time
+        start_time=$SECONDS
+
+        # Use GPU to reduce the required time to train the models
+        SemiBin2 single_easy_bin \
+        --threads $(nproc --ignore=1) \
+        --self-supervised \
+        --input-fasta "7_megahit/${sample_list}_megahit.fasta" \
+        --input-bam "9_bwa_mapping/${sample_list}.mapped.sorted.bam" \
+        --output "9_semibin/${sample_list}_semibin"
+
+        # Rename, extract and organize bin files
+        # Rename and move bin files
+        for file in 9_semibin/"${sample_list}"_semibin/output_bins/SemiBin_*.fa.gz; do
+            [ -e "$file" ] || continue
+            filename=$(basename "$file" .fa.gz)
+            newname="${filename/#SemiBin_/${sample_list}Bin}"
+            mv "$file" 9_semibin/"${sample_list}"_semibin/"$newname".fasta.gz
+        done
+        # Delete intermediate directory
+        rm -r 9_semibin/"${sample_list}"_semibin/output_bins
+
+        # Stop counting the running time
+        elapsed_time=$((SECONDS - $start_time))
+        running_time=$(date -u -d "@$elapsed_time" +"%H:%M:%S")
+        # Show the running time
+        echo "9) Binning of metagenomes from ${source}: running time ${running_time}" | tee -a 0_workflow_progress.txt
+    else
+        echo "⚠️ Skipping concatenation for ${source}: no sample found (minimum 1 required)."
+    fi
+done
+
+# Deactivate Conda environment
+conda activate base
 
 # Compress directory
 echo "Compressing directory: 9_semibin"
@@ -1944,7 +2330,7 @@ for dir in 9_semibin/*_semibin/; do
     sample=${dirname%%_semibin/}
 
     # Inform current sample
-    echo "QUAST is processing sample: ${sample} (${i}/${sample_count})"
+    echo "10) QUAST is processing sample: ${sample} (${i}/${sample_count})"
     # Start counting the running time
     start_time=$SECONDS
 
@@ -1961,7 +2347,7 @@ for dir in 9_semibin/*_semibin/; do
     elapsed_time=$((SECONDS - $start_time))
     running_time=$(date -u -d "@$elapsed_time" +"%H:%M:%S")
     # Show the running time
-    echo "$workflow_step for sample $sample: running time ${running_time}. Finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
+    echo "$workflow_step for sample $sample: running time ${running_time} (Finished at $(date +'%Y-%m-%d %H:%M:%S'))" | tee -a 0_workflow_progress.txt
     i=$((i + 1))
 done
 
@@ -2005,7 +2391,7 @@ for dir in 9_semibin/*_semibin/; do
     sample=${dirname%%_semibin/}
     
     # Inform current sample
-    echo "CheckM2 is processing sample: ${sample} (${i}/${sample_count})"
+    echo "10) CheckM2 is processing sample: ${sample} (${i}/${sample_count})"
     # Start counting the running time
     start_time=$SECONDS
 
@@ -2026,7 +2412,7 @@ for dir in 9_semibin/*_semibin/; do
     elapsed_time=$((SECONDS - $start_time))
     running_time=$(date -u -d "@$elapsed_time" +"%H:%M:%S")
     # Show the running time
-    echo "$workflow_step for sample $sample: running time ${running_time}. Finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
+    echo "$workflow_step for sample $sample: running time ${running_time} (Finished at $(date +'%Y-%m-%d %H:%M:%S'))" | tee -a 0_workflow_progress.txt
     i=$((i + 1))
 done
 # Deactivate Conda environment
@@ -2070,7 +2456,7 @@ for dir in 9_semibin/*_semibin/; do
     sample=${dirname%%_semibin/}
 
     # Inform current sample
-    echo "GUNC is processing sample: ${sample} (${i}/${sample_count})"
+    echo "10) GUNC is processing sample: ${sample} (${i}/${sample_count})"
     # Start counting the running time
     start_time=$SECONDS
 
@@ -2112,7 +2498,7 @@ for dir in 9_semibin/*_semibin/; do
     elapsed_time=$((SECONDS - $start_time))
     running_time=$(date -u -d "@$elapsed_time" +"%H:%M:%S")
     # Show the running time
-    echo "$workflow_step for sample $sample: running time ${running_time}. Finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
+    echo "$workflow_step for sample $sample: running time ${running_time} (Finished at $(date +'%Y-%m-%d %H:%M:%S'))" | tee -a 0_workflow_progress.txt
     i=$((i + 1))
 done
 # Deactivate Conda environment
@@ -2158,7 +2544,7 @@ for dir in 9_semibin/*_semibin/; do
     sample=${dirname%%_semibin/}
 
     # Inform current sample
-    echo "GTDB-Tk is processing sample: ${sample} (${i}/${sample_count})"
+    echo "10) GTDB-Tk is processing sample: ${sample} (${i}/${sample_count})"
     # Start counting the running time
     start_time=$SECONDS
 
@@ -2188,7 +2574,7 @@ for dir in 9_semibin/*_semibin/; do
     elapsed_time=$((SECONDS - $start_time))
     running_time=$(date -u -d "@$elapsed_time" +"%H:%M:%S")
     # Show the running time
-    echo "$workflow_step for sample $sample: running time ${running_time}. Finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
+    echo "$workflow_step for sample $sample: running time ${running_time} (Finished at $(date +'%Y-%m-%d %H:%M:%S'))" | tee -a 0_workflow_progress.txt
     i=$((i + 1))
 done
 
@@ -2233,7 +2619,7 @@ for dir in 9_semibin/*_semibin/; do
     sample=${dirname%%_semibin/}
 
     # Inform current sample
-    echo "Barrnap is processing sample: ${sample} (${i}/${sample_count})"
+    echo "10) Barrnap is processing sample: ${sample} (${i}/${sample_count})"
     # Start counting the running time
     start_time=$SECONDS
 
@@ -2266,7 +2652,7 @@ for dir in 9_semibin/*_semibin/; do
     elapsed_time=$((SECONDS - $start_time))
     running_time=$(date -u -d "@$elapsed_time" +"%H:%M:%S")
     # Show the running time
-    echo "$workflow_step for sample $sample: running time ${running_time}. Finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
+    echo "$workflow_step for sample $sample: running time ${running_time} (Finished at $(date +'%Y-%m-%d %H:%M:%S'))" | tee -a 0_workflow_progress.txt
     i=$((i + 1))
 done
 # Deactivate Conda environment
@@ -2314,7 +2700,7 @@ for dir in 9_semibin/*_semibin/; do
     sample=${dirname%%_semibin/}
     
     # Inform current sample
-    echo "Prokka is processing sample: ${sample} (${i}/${sample_count})"
+    echo "11) Prokka is processing sample: ${sample} (${i}/${sample_count})"
     # Start counting the running time
     start_time=$SECONDS
 
@@ -2353,7 +2739,7 @@ for dir in 9_semibin/*_semibin/; do
     elapsed_time=$((SECONDS - $start_time))
     running_time=$(date -u -d "@$elapsed_time" +"%H:%M:%S")
     # Show the running time
-    echo "$workflow_step for sample $sample: running time ${running_time}. Finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
+    echo "$workflow_step for sample $sample: running time ${running_time} (Finished at $(date +'%Y-%m-%d %H:%M:%S'))" | tee -a 0_workflow_progress.txt
     
     i=$((i + 1))
 done
@@ -2395,7 +2781,7 @@ for dir in 11_prokka/*_prokka/; do
     sample=${dirname%%_prokka/}
     
     # Inform current sample
-    echo "eggNOG-mapper is processing sample: ${sample} (${i}/${sample_count})"
+    echo "11) eggNOG-mapper is processing sample: ${sample} (${i}/${sample_count})"
     # Start counting the running time
     start_time=$SECONDS
 
@@ -2425,7 +2811,7 @@ for dir in 11_prokka/*_prokka/; do
     elapsed_time=$((SECONDS - $start_time))
     running_time=$(date -u -d "@$elapsed_time" +"%H:%M:%S")
     # Show the running time
-    echo "$workflow_step for sample $sample: running time ${running_time}. Finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
+    echo "$workflow_step for sample $sample: running time ${running_time} (Finished at $(date +'%Y-%m-%d %H:%M:%S'))" | tee -a 0_workflow_progress.txt
     
     i=$((i + 1))
 done
@@ -2467,7 +2853,7 @@ for dir in 11_prokka/*_prokka/; do
     sample=${dirname%%_prokka/}
     
     # Inform current sample
-    echo "dbCAN is processing sample: ${sample} (${i}/${sample_count})"
+    echo "11) dbCAN is processing sample: ${sample} (${i}/${sample_count})"
     # Start counting the running time
     start_time=$SECONDS
 
@@ -2497,7 +2883,7 @@ for dir in 11_prokka/*_prokka/; do
     elapsed_time=$((SECONDS - $start_time))
     running_time=$(date -u -d "@$elapsed_time" +"%H:%M:%S")
     # Show the running time
-    echo "$workflow_step for sample $sample: running time ${running_time}. Finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
+    echo "$workflow_step for sample $sample: running time ${running_time} (Finished at $(date +'%Y-%m-%d %H:%M:%S'))" | tee -a 0_workflow_progress.txt
     
     i=$((i + 1))
 done
@@ -2538,7 +2924,7 @@ for dir in 11_prokka/*_prokka/; do
     sample=${dirname%%_prokka/}
     
     # Inform current sample
-    echo "DeepGOPlus is processing sample: ${sample} (${i}/${sample_count})"
+    echo "11) DeepGOPlus is processing sample: ${sample} (${i}/${sample_count})"
     # Start counting the running time
     start_time=$SECONDS
 
@@ -2563,7 +2949,7 @@ for dir in 11_prokka/*_prokka/; do
     elapsed_time=$((SECONDS - $start_time))
     running_time=$(date -u -d "@$elapsed_time" +"%H:%M:%S")
     # Show the running time
-    echo "$workflow_step for sample $sample: running time ${running_time}. Finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
+    echo "$workflow_step for sample $sample: running time ${running_time} (Finished at $(date +'%Y-%m-%d %H:%M:%S'))" | tee -a 0_workflow_progress.txt
     
     i=$((i + 1))
 done
@@ -2604,7 +2990,7 @@ for dir in 11_prokka/*_prokka/; do
     sample=${dirname%%_prokka/}
     
     # Inform current sample
-    echo "AMRFinderPlus is processing sample: ${sample} (${i}/${sample_count})"
+    echo "11) AMRFinderPlus is processing sample: ${sample} (${i}/${sample_count})"
     # Start counting the running time
     start_time=$SECONDS
 
@@ -2637,7 +3023,7 @@ for dir in 11_prokka/*_prokka/; do
     elapsed_time=$((SECONDS - $start_time))
     running_time=$(date -u -d "@$elapsed_time" +"%H:%M:%S")
     # Show the running time
-    echo "$workflow_step for sample $sample: running time ${running_time}. Finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
+    echo "$workflow_step for sample $sample: running time ${running_time} (Finished at $(date +'%Y-%m-%d %H:%M:%S'))" | tee -a 0_workflow_progress.txt
     
     i=$((i + 1))
 done
@@ -2661,7 +3047,7 @@ echo "$workflow_step step finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_w
 ## 12.1) MOB-suite
 
 # Software name for tracking progress in 0_workflow_progress.txt
-workflow_step="11) MOB-suite"
+workflow_step="12) MOB-suite"
 # Update the file 0_workflow_progress.txt
 echo "$workflow_step step started at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
 
@@ -2683,7 +3069,7 @@ for dir in 11_prokka/*_prokka/; do
     sample=${dirname%%_prokka/}
     
     # Inform current sample
-    echo "MOB-suite is processing sample: ${sample} (${i}/${sample_count})"
+    echo "12) MOB-suite is processing sample: ${sample} (${i}/${sample_count})"
     # Start counting the running time
     start_time=$SECONDS
 
@@ -2795,7 +3181,7 @@ for dir in 11_prokka/*_prokka/; do
     elapsed_time=$((SECONDS - $start_time))
     running_time=$(date -u -d "@$elapsed_time" +"%H:%M:%S")
     # Show the running time
-    echo "$workflow_step for sample $sample: running time ${running_time}. Finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
+    echo "$workflow_step for sample $sample: running time ${running_time} (Finished at $(date +'%Y-%m-%d %H:%M:%S'))" | tee -a 0_workflow_progress.txt
     
     i=$((i + 1))
 done
@@ -2815,7 +3201,7 @@ echo "$workflow_step step finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_w
 ## 12.2) VIBRANT
 
 # Software name for tracking progress in 0_workflow_progress.txt
-workflow_step="11) VIBRANT"
+workflow_step="12) VIBRANT"
 # Update the file 0_workflow_progress.txt
 echo "$workflow_step step started at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
 
@@ -2837,7 +3223,7 @@ for dir in 11_prokka/*_prokka/; do
     sample=${dirname%%_prokka/}
     
     # Inform current sample
-    echo "AMRFinderPlus is processing sample: ${sample} (${i}/${sample_count})"
+    echo "12) VIBRANT is processing sample: ${sample} (${i}/${sample_count})"
     # Start counting the running time
     start_time=$SECONDS
 
@@ -2867,7 +3253,7 @@ for dir in 11_prokka/*_prokka/; do
     elapsed_time=$((SECONDS - $start_time))
     running_time=$(date -u -d "@$elapsed_time" +"%H:%M:%S")
     # Show the running time
-    echo "$workflow_step for sample $sample: running time ${running_time}. Finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
+    echo "$workflow_step for sample $sample: running time ${running_time} (Finished at $(date +'%Y-%m-%d %H:%M:%S'))" | tee -a 0_workflow_progress.txt
     
     i=$((i + 1))
 done

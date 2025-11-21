@@ -56,15 +56,15 @@ It also includes detailed instructions for the installation of all necessary sof
     * dbCAN
     * AMRFinderPlus
     * VIBRANT 
-9A) Binning (Single-sample only)
-    * Bwa-mem2 index
-    * Bwa-mem2 mapping
-    * SemiBin
-9B) Binning (Single or Multi-sample)
-    * SemiBin concatenate_fasta
-    * Bwa-mem2 index
-    * Bwa-mem2 mapping
-    * Semibin binning
+9) Binning (Single-Sample or Single/Multi-sample)
+    * Single-sample: Bwa-mem2 index
+    * Single-sample: Bwa-mem2 mapping
+    * Single-sample: SemiBin
+    * Single/Multi-sample: Binning
+    * Single/Multi-sample: SemiBin concatenate_fasta
+    * Single/Multi-sample: Bwa-mem2 index
+    * Single/Multi-sample: Bwa-mem2 mapping
+    * Single/Multi-sample: Semibin binning
 10) Bin quality control
     * QUAST
     * CheckM2

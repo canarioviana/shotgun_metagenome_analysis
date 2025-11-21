@@ -55,7 +55,7 @@ It also includes detailed instructions for the installation of all necessary sof
     * eggNOG-mapper
     * dbCAN
     * AMRFinderPlus
-    * VIBRANT
+    * VIBRANT    * 
 9A) Binning (Single-sample only)
     * Bwa-mem2 index
     * Bwa-mem2 mapping
@@ -80,6 +80,7 @@ It also includes detailed instructions for the installation of all necessary sof
 12) Bin mobile elements
     * MOB-suite 
     * VIBRANT
+
 
 
 

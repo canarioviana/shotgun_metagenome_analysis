@@ -60,7 +60,6 @@ It also includes detailed instructions for the installation of all necessary sof
     * Single-sample: Bwa-mem2 index
     * Single-sample: Bwa-mem2 mapping
     * Single-sample: SemiBin
-    * Single/Multi-sample: Binning
     * Single/Multi-sample: SemiBin concatenate_fasta
     * Single/Multi-sample: Bwa-mem2 index
     * Single/Multi-sample: Bwa-mem2 mapping

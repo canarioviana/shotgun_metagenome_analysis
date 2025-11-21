@@ -59,7 +59,7 @@ It also includes detailed instructions for the installation of all necessary sof
 9) Binning
     * Method A - Single-sample: Bwa-mem2 index
     * Method A - Single-sample: Bwa-mem2 mapping
-    * Method A - Single-sample: SemiBin
+    * Method A - Single-sample: SemiBin binning
     * Method B - Single/Multi-sample: SemiBin concatenate_fasta
     * Method B - Single/Multi-sample: Bwa-mem2 index
     * Method B - Single/Multi-sample: Bwa-mem2 mapping

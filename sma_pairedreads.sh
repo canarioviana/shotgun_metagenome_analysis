@@ -31,7 +31,7 @@
     # 5.3) Bwa-mem2 mapping
     # 5.4) FastQC
     # 5.5) MultiQC
-## 6) Taxonomic abundance profile
+## 6) Taxonomic abundance profile and prophages
     # 6.1) Kraken
     # 6.2) Kraken -> Bracken
     # 6.3) Kraken -> Bracken -> Krona
@@ -53,12 +53,12 @@
     # 9.1) Bwa-mem2 index
     # 9.2) Bwa-mem2 mapping
     # 9.3) SemiBin
-## 9B) Binning (Single or Multi-sample. Self-supervised mode)
+## 9B) Binning (Single or Multi-sample)
     # 9.1) SemiBin concatenate_fasta
     # 9.2) Bwa-mem2 index
     # 9.3) Bwa-mem2 mapping
     # 9.4) Semibin binning
-## 10) Bin quality control
+## 10) Bin quality control and taxonomy
     # 10.1) QUAST
     # 10.2) CheckM2
     # 10.3) GUNC
@@ -69,7 +69,7 @@
     # 11.3) dbCAN
     # 11.4) DeepGOPlus
     # 11.5) AMRFinderPlus
-## 12) Bin mobile elements
+## 12) Bin mobile genetic elements
     # 12.1) MOB-suite
     # 12.2) VIBRANT
 

@@ -68,8 +68,8 @@ It also includes detailed instructions for the installation of all necessary sof
     * QUAST
     * CheckM2
     * GUNC
-    * GTDB-Tk
     * Barrnap
+    * GTDB-Tk
 11) Bin functional abundance profile
     * Prokka
     * eggNOG-mapper

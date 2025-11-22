@@ -6,7 +6,7 @@ It also includes detailed instructions for the installation of all necessary sof
 
 ---
 
-## 📋 Usage Guidelines
+## Usage Guidelines
 
 * The scripts provide comprehensive **software installation instructions** and **a worfkflow for metagenome analysis**.
 
@@ -18,7 +18,7 @@ It also includes detailed instructions for the installation of all necessary sof
 
 ---
 
-## 🛠️ The Shotgun Metagenome Analysis Workflow
+## The Shotgun Metagenome Analysis Workflow
 
 1) Reads files and renaming
     * Reads stored as local files

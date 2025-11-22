@@ -48,7 +48,7 @@ It also includes detailed instructions for the installation of all necessary sof
 7) Metagenome assembly
     * MEGAHIT
     * QUAST
-8) Functional abundance profile
+8) Functional abundance profile and prophages
     * Barrnap
     * Aragorn
     * Pyrodigal
@@ -64,7 +64,7 @@ It also includes detailed instructions for the installation of all necessary sof
     * Method B - Single/Multi-sample: Bwa-mem2 index
     * Method B - Single/Multi-sample: Bwa-mem2 mapping
     * Method B - Single/Multi-sample: Semibin binning
-10) Bin quality control
+10) Bin quality control and taxonomy
     * QUAST
     * CheckM2
     * GUNC
@@ -76,7 +76,7 @@ It also includes detailed instructions for the installation of all necessary sof
     * dbCAN
     * DeepGOPlus
     * AMRFinderPlus
-12) Bin mobile elements
+12) Bin mobile genetic elements
     * MOB-suite 
     * VIBRANT
 

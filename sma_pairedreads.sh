@@ -62,7 +62,8 @@
     # 10.1) QUAST
     # 10.2) CheckM2
     # 10.3) GUNC
-    # 10.4) GTDB-Tk
+    # 10.4) Barrnap
+    # 10.5) GTDB-Tk
 ## 11) Bin functional abundance profile
     # 11.1) Prokka
     # 11.2) eggNOG-mapper
@@ -2516,84 +2517,7 @@ rm -r 10_gunc
 echo "$workflow_step step finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
 
 ############################################################
-## 10.4) GTDB-Tk
-
-# Software name for tracking progress in 0_workflow_progress.txt
-workflow_step="10) GTDB-Tk"
-# Update the file 0_workflow_progress.txt
-echo "$workflow_step step started at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
-
-# Requires 64GB of RAM if the species is not identified by the ANI screening step
-
-# Create an output directory
-mkdir -p 10_gtdbtk
-
-# Calculate the sample count to display loop progress
-i=1
-dir=(9_semibin/*_semibin/)
-sample_count=${#dir[@]}
-
-# Activate Conda environment
-conda activate gtdbtk
-
-# Loop through a list of sample directories
-for dir in 9_semibin/*_semibin/; do
-    # Extract directory name
-    dirname=${dir#*/}
-    # Extract sample name
-    sample=${dirname%%_semibin/}
-
-    # Inform current sample
-    echo "10) GTDB-Tk is processing sample: ${sample} (${i}/${sample_count})"
-    # Start counting the running time
-    start_time=$SECONDS
-
-    # Create an output directory
-    mkdir -p "10_gtdbtk/${sample}_gtdbtk"
-
-    # Run main software
-    gtdbtk classify_wf \
-    --cpus $(nproc --ignore=1) \
-    --extension .fasta.gz \
-    --mash_db /db/gtdbtk \
-    --genome_dir "9_semibin/${sample}_semibin" \
-    --out_dir "10_gtdbtk/${sample}_gtdbtk"
-
-    # Copy and rename output files
-    if [ -f "10_gtdbtk/${sample}_gtdbtk/gtdbtk.bac120.summary.tsv" ]; then
-        cp "10_gtdbtk/${sample}_gtdbtk/gtdbtk.bac120.summary.tsv" "10_gtdbtk/${sample}_gtdbtk_bacteria.tsv"
-    fi
-    if [ -f "10_gtdbtk/${sample}_gtdbtk/gtdbtk.ar53.summary.tsv" ]; then
-        cp "10_gtdbtk/${sample}_gtdbtk/gtdbtk.ar53.summary.tsv" "10_gtdbtk/${sample}_gtdbtk_archaea.tsv"
-    fi
-
-    # Delete the temporary directorys
-    rm -r "10_gtdbtk/${sample}_gtdbtk"
-
-    # Stop counting the running time
-    elapsed_time=$((SECONDS - $start_time))
-    running_time=$(date -u -d "@$elapsed_time" +"%H:%M:%S")
-    # Show the running time
-    echo "$workflow_step for sample $sample: running time ${running_time} (Finished at $(date +'%Y-%m-%d %H:%M:%S'))" | tee -a 0_workflow_progress.txt
-    i=$((i + 1))
-done
-
-# Deactivate Conda environment
-conda deactivate
-
-# Compress directory
-echo "Compressing output directory"
-tar -c --use-compress-program=pigz -f 10_gtdbtk.tar.gz 10_gtdbtk
-# Create checksum file
-md5sum 10_gtdbtk.tar.gz > 10_gtdbtk.tar.gz.md5
-# Delete the output directory
-rm -r 10_gtdbtk
-
-# Update the file 0_workflow_progress.txt
-echo "$workflow_step step finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
-
-############################################################
-## 10.5) Barrnap
+## 10.4) Barrnap
 
 # Software name for tracking progress in 0_workflow_progress.txt
 workflow_step="10) Barrnap"
@@ -2665,6 +2589,83 @@ tar -c --use-compress-program=pigz -f 10_barrnap.tar.gz 10_barrnap
 md5sum 10_barrnap.tar.gz > 10_barrnap.tar.gz.md5
 # Delete the output directory
 rm -r 10_barrnap
+
+# Update the file 0_workflow_progress.txt
+echo "$workflow_step step finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
+
+############################################################
+## 10.5) GTDB-Tk
+
+# Software name for tracking progress in 0_workflow_progress.txt
+workflow_step="10) GTDB-Tk"
+# Update the file 0_workflow_progress.txt
+echo "$workflow_step step started at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
+
+# Requires 64GB of RAM if the species is not identified by the ANI screening step
+
+# Create an output directory
+mkdir -p 10_gtdbtk
+
+# Calculate the sample count to display loop progress
+i=1
+dir=(9_semibin/*_semibin/)
+sample_count=${#dir[@]}
+
+# Activate Conda environment
+conda activate gtdbtk
+
+# Loop through a list of sample directories
+for dir in 9_semibin/*_semibin/; do
+    # Extract directory name
+    dirname=${dir#*/}
+    # Extract sample name
+    sample=${dirname%%_semibin/}
+
+    # Inform current sample
+    echo "10) GTDB-Tk is processing sample: ${sample} (${i}/${sample_count})"
+    # Start counting the running time
+    start_time=$SECONDS
+
+    # Create an output directory
+    mkdir -p "10_gtdbtk/${sample}_gtdbtk"
+
+    # Run main software
+    gtdbtk classify_wf \
+    --cpus $(nproc --ignore=1) \
+    --extension .fasta.gz \
+    --mash_db /db/gtdbtk \
+    --genome_dir "9_semibin/${sample}_semibin" \
+    --out_dir "10_gtdbtk/${sample}_gtdbtk"
+
+    # Copy and rename output files
+    if [ -f "10_gtdbtk/${sample}_gtdbtk/gtdbtk.bac120.summary.tsv" ]; then
+        cp "10_gtdbtk/${sample}_gtdbtk/gtdbtk.bac120.summary.tsv" "10_gtdbtk/${sample}_gtdbtk_bacteria.tsv"
+    fi
+    if [ -f "10_gtdbtk/${sample}_gtdbtk/gtdbtk.ar53.summary.tsv" ]; then
+        cp "10_gtdbtk/${sample}_gtdbtk/gtdbtk.ar53.summary.tsv" "10_gtdbtk/${sample}_gtdbtk_archaea.tsv"
+    fi
+
+    # Delete the temporary directorys
+    rm -r "10_gtdbtk/${sample}_gtdbtk"
+
+    # Stop counting the running time
+    elapsed_time=$((SECONDS - $start_time))
+    running_time=$(date -u -d "@$elapsed_time" +"%H:%M:%S")
+    # Show the running time
+    echo "$workflow_step for sample $sample: running time ${running_time} (Finished at $(date +'%Y-%m-%d %H:%M:%S'))" | tee -a 0_workflow_progress.txt
+    i=$((i + 1))
+done
+
+# Deactivate Conda environment
+conda deactivate
+
+# Compress directory
+echo "Compressing output directory"
+tar -c --use-compress-program=pigz -f 10_gtdbtk.tar.gz 10_gtdbtk
+# Create checksum file
+md5sum 10_gtdbtk.tar.gz > 10_gtdbtk.tar.gz.md5
+# Delete the output directory
+rm -r 10_gtdbtk
 
 # Update the file 0_workflow_progress.txt
 echo "$workflow_step step finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt

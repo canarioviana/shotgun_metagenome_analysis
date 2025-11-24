@@ -557,6 +557,7 @@ done
 conda deactivate
 
 # Generate checksum files for the reads
+echo "Processing checksum of read files at $(date +'%Y-%m-%d %H:%M:%S')"  | tee -a 0_workflow_progress.txt
 cd 5_bwa_reads
 for file in *.gz; do
     echo "Processing checksum of file: ${file}"

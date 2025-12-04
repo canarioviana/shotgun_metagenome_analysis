@@ -1,7 +1,7 @@
 # Bash script for shotgun metagenome analysis from short-read sequencing data
 #
 # Author: Marcus Vinicius Canário Viana
-# Date: 21/11/2025
+# Date: 04/12/2025
 # More info: see README.md in the repository
 #
 # Instructions:
@@ -2289,7 +2289,7 @@ while IFS=$'\t' read -r source sample_list; do
 done
 
 # Deactivate Conda environment
-conda activate base
+conda deactivate
 
 # Compress directory
 echo "Compressing directory: 9_semibin"

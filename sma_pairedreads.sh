@@ -1768,8 +1768,8 @@ for dir in 9_bwa_index/*/; do
     bwa-mem2 mem \
         -t $(nproc --ignore=1) \
         "9_bwa_index/${sample}/${sample}" \
-        5_bwa_reads/"${sample}"*_1.fq.gz \
-        5_bwa_reads/"${sample}"*_2.fq.gz \
+        5_bwa_reads/"${sample}"[^0-9]*_1.fq.gz \
+        5_bwa_reads/"${sample}"[^0-9]*_2.fq.gz \
         2> "9_bwa_mapping/${sample}_alignment.log" \
     | tee >(samtools flagstat - > "9_bwa_mapping/${sample}_allreads_flagstat.txt") \
     | samtools view -b -h -F 4 -@ $(nproc --ignore=1) - \
@@ -2133,8 +2133,8 @@ while IFS=$'\t' read -r sample ref_accession ref_name isolation_source others; d
     bwa-mem2 mem \
         -t $(nproc --ignore=1) \
         "9_bwa_index/${isolation_source}/${isolation_source}" \
-        5_bwa_reads/"${sample}"*_1.fq.gz \
-        5_bwa_reads/"${sample}"*_2.fq.gz \
+        5_bwa_reads/"${sample}"[^0-9]*_1.fq.gz \
+        5_bwa_reads/"${sample}"[^0-9]*_2.fq.gz \
         2> "9_bwa_mapping/${sample}_alignment.log" \
     | tee >(samtools flagstat - > "9_bwa_mapping/${sample}_allreads_flagstat.txt") \
     | samtools view -b -h -F 4 -@ $(nproc --ignore=1) - \

@@ -1,7 +1,7 @@
 # Bash script for shotgun metagenome analysis from short-read sequencing data
 #
 # Author: Marcus Vinicius Canário Viana
-# Date: 04/12/2025
+# Date: 15/12/2025
 # More info: see README.md in the repository
 #
 # Instructions:

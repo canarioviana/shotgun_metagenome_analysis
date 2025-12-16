@@ -546,6 +546,14 @@ while IFS=$'\t' read -r sample ref_accession ref_name isolation_source others; d
     -@ $(nproc --ignore=1) \
     -
 
+    # Validade reads files
+    echo "Validating R1 file"
+    gunzip -t "5_bwa_reads/${sample}_trimmed_nohost_1.fq.gz" \
+    2>> 5_bwa_reads_corrupted.txt
+    echo "Validating R2 file"
+    gunzip -t "5_bwa_reads/${sample}_trimmed_nohost_2.fq.gz" \
+    2>> 5_bwa_reads_corrupted.txt
+
     # Stop counting the running time
     elapsed_time=$((SECONDS - $start_time))
     running_time=$(date -u -d "@$elapsed_time" +"%H:%M:%S")
@@ -1124,7 +1132,7 @@ for r1 in 5_bwa_reads/*_1.fq.gz; do
     -1 "${r1}" \
     -2 "${r2}" \
     -o "7_megahit/${sample}_megahit" \
-    --min-contig-len 1500
+    --min-contig-len 1000
 
     # Move and rename assembly file
     mv "7_megahit/${sample}_megahit/final.contigs.fa" "7_megahit/${sample}_megahit.fasta"

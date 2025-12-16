@@ -535,10 +535,10 @@ while IFS=$'\t' read -r sample ref_accession ref_name isolation_source others; d
     "3_fastp/${sample}_trimmed_2.fq.gz" \
     2> "5_bwa_reads/${sample}_alignment.log" \
     | tee >(samtools flagstat - > "5_bwa_reads/${sample}_nofilter_flagstat.txt") \
-    | samtools view -h -b -f 12 -@ $(nproc --ignore=1) - \
+    | samtools view -h -b -f 4 -@ 8 - \
     | tee >(samtools flagstat - > "5_bwa_reads/${sample}_hostfilter_flagstat.txt") \
-    | samtools sort -n -@ $(nproc --ignore=1) - \
-    | samtools fastq \
+    | samtools sort -n -@ 8 - \
+    | samtools fastq -c 6 \
     -1 "5_bwa_reads/${sample}_trimmed_nohost_1.fq.gz" \
     -2 "5_bwa_reads/${sample}_trimmed_nohost_2.fq.gz" \
     -0 /dev/null \
@@ -1124,7 +1124,7 @@ for r1 in 5_bwa_reads/*_1.fq.gz; do
     -1 "${r1}" \
     -2 "${r2}" \
     -o "7_megahit/${sample}_megahit" \
-    --min-contig-len 200
+    --min-contig-len 1500
 
     # Move and rename assembly file
     mv "7_megahit/${sample}_megahit/final.contigs.fa" "7_megahit/${sample}_megahit.fasta"

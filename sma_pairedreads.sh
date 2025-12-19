@@ -1,7 +1,7 @@
 # Bash script for shotgun metagenome analysis from short-read sequencing data
 #
 # Author: Marcus Vinicius Canário Viana
-# Date: 15/12/2025
+# Date: 18/12/2025
 # More info: see README.md in the repository
 #
 # Instructions:
@@ -683,10 +683,10 @@ done
 conda deactivate
 
 # Compressing the report directory
-tar -c --use-compress-program=pigz -f 6_kraken_output.tar.gz 6_kraken_output
+echo "Compressing Kraken report directory."
+tar -c --use-compress-program=pigz -f 6_kraken_report.tar.gz 6_kraken_report
 # Generate checksum of file
-echo "Processing checksum of compressed report file."
-md5sum 6_kraken_output.tar.gz > 6_kraken_output.tar.gz.md5
+md5sum 6_kraken_report.tar.gz > 6_kraken_report.tar.gz.md5
 
 # Generate checksum of Kraken output (.kraken.gz) files 
 # Go to target directory

@@ -1,7 +1,7 @@
 # Bash script for shotgun metagenome analysis from short-read sequencing data
 #
 # Author: Marcus Vinicius Canário Viana
-# Date: 18/12/2025
+# Date: 19/12/2025
 # More info: see README.md in the repository
 #
 # Instructions:
@@ -1132,7 +1132,7 @@ for r1 in 5_bwa_reads/*_1.fq.gz; do
     -1 "${r1}" \
     -2 "${r2}" \
     -o "7_megahit/${sample}_megahit" \
-    --min-contig-len 1000
+    --min-contig-len 500
 
     # Move and rename assembly file
     mv "7_megahit/${sample}_megahit/final.contigs.fa" "7_megahit/${sample}_megahit.fasta"

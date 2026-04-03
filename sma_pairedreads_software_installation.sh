@@ -17,9 +17,9 @@
 # C) Connecting to a server and using Screen
 
 
-##########################################################################
+############################################################
 ## A) System requirements
-##########################################################################
+############################################################
 # RAM:
 # 16GB is the minimum required
 # 64GB if you run taxonomic analysis with GTDB-Tk
@@ -27,15 +27,15 @@
 #
 # Static IP address (For use on a computer server)
 
-##########################################################################
+############################################################
 ## B) Software installation
-##########################################################################
+############################################################
 
-##########################################################################
+############################################################
 ## B.1) Software installation - Miniconda
-##########################################################################
+############################################################
 
-##########################################################################
+############################################################
 # Miniconda (For a single user. Local computer.)
 # Download the installer
 cd
@@ -94,7 +94,7 @@ sudo ln -s /path/to/real/database/directory/db db
 sudo chown $USER /db
 sudo chgrp $USER /db
 
-##########################################################################
+############################################################
 # Miniconda (For all users. Server computer.)
 # Log in as root
 sudo su
@@ -172,9 +172,9 @@ sudo find /db/ -type f -exec chmod a+r {} \;
 # OR give to all users the permission to read databases directories and files
 sudo chmod -R o+rx /db
 
-##########################################################################
+############################################################
 ## B.2) Software installation - Metagenomics
-##########################################################################
+############################################################
 
 # Check the software manuals for database installation
 
@@ -412,7 +412,15 @@ metaphlan --install --db_dir /db/metaphlan/
 conda deactivate
 conda create -n graphlan -c biobakery graphlan -y
 
-##########################################################################
+############################################################
+# Minimap2 (tested version: 2.30)
+# https://github.com/lh3/minimap2
+conda create -n minimap2 -c bioconda minimap2 samtools -y
+conda activate minimap2
+conda install -c conda-forge ncurses
+conda deactivate
+
+############################################################
 # MOB-suite (Plasmid identification)
 conda create -n mob_suite -c bioconda mob_suite -y
 
@@ -426,7 +434,7 @@ conda create -n multiqc -c bioconda multiqc -y
 # https://github.com/ncbi/datasets
 conda create -n datasets ncbi-datasets-cli -y
 
-##########################################################################
+############################################################
 # Prokka (tested version: 1.14.6)
 conda create -n prokka -c conda-forge prokka -y
 
@@ -458,7 +466,11 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 conda install -c conda-forge -c bioconda semibin=2.2.0 -y
 conda deactivate
 
-##########################################################################
+############################################################
+# seqkit (Filter sequences by size)
+conda create -n seqkit -c bioconda seqkit -y
+
+############################################################
 # SRA Tools (tested version: 3.2.1)
 conda create -n sra-tools -c bioconda sra-tools -y
 
@@ -471,9 +483,9 @@ mkdir /db/vibrant
 download-db.sh /db/vibrant
 conda deactivate
 
-##########################################################################
+############################################################
 ## C) Connecting to a server and using Screen
-##########################################################################
+############################################################
 
 # Connection to server
 ssh user_name@server_ip

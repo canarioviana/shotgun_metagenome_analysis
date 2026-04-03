@@ -57,26 +57,28 @@ It also includes detailed instructions for the installation of all necessary sof
     * AMRFinderPlus
     * VIBRANT 
 9) Binning
-    * Method A - Single-sample: Bwa-mem2 index
-    * Method A - Single-sample: Bwa-mem2 mapping
+    * Method A - Single-sample: SeqKit
+    * Method A - Single-sample: Minimap2 index
+    * Method A - Single-sample: Minimap2 mapping
     * Method A - Single-sample: SemiBin binning
+    * Method B - Single/Multi-sample: Seqkit
     * Method B - Single/Multi-sample: SemiBin concatenate_fasta
-    * Method B - Single/Multi-sample: Bwa-mem2 index
-    * Method B - Single/Multi-sample: Bwa-mem2 mapping
+    * Method B - Single/Multi-sample: Minimap2 index
+    * Method B - Single/Multi-sample: Minimap2 mapping
     * Method B - Single/Multi-sample: Semibin binning
-10) Bin quality control and taxonomy
+11) Bin quality control and taxonomy
     * QUAST
     * CheckM2
     * GUNC
     * Barrnap
     * GTDB-Tk
-11) Bin functional abundance profile
+12) Bin functional abundance profile
     * Prokka
     * eggNOG-mapper
     * dbCAN
     * DeepGOPlus
     * AMRFinderPlus
-12) Bin mobile genetic elements
+13) Bin mobile genetic elements
     * MOB-suite 
     * VIBRANT
 

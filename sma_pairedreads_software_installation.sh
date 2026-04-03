@@ -377,22 +377,22 @@ echo $GUNC_DB
 conda deactivate
 
 ############################################################
-# Kraken 2 (tested version: 2.1.6, database k2_pluspf_20251015)
+# Kraken 2 (tested version: 2.1.6, database k2_pluspf_20260226)
 # https://github.com/DerrickWood/kraken2
 # https://benlangmead.github.io/aws-indexes/k2
 conda create -n kraken2 -c conda-forge -c bioconda kraken2 krakentools bracken krona r bowtie2 samtools -y
 # Database PlusPF-16 (14.9GB)
 cd /db
-wget https://genome-idx.s3.amazonaws.com/kraken/k2_pluspf_16_GB_20251015.tar.gz
-mkdir -p /db/kraken2/k2_pluspf_16_GB_20251015
-tar -xzf k2_pluspf_16_GB_20251015.tar.gz -C kraken2/k2_pluspf_16_GB_20251015
-# rm k2_pluspf_16_GB_20251015.tar.gz
+wget https://genome-idx.s3.amazonaws.com/kraken/k2_pluspf_16_GB_20260226.tar.gz
+mkdir -p kraken2/k2_pluspf_16_GB_20260226
+tar -xzf k2_pluspf_16_GB_20260226.tar.gz -C kraken2/k2_pluspf_16_GB_20260226
+# rm k2_pluspf_16_GB_20260226.tar.gz
 cd
 # Database PlusPF (100. 6GB)
 cd /db
-wget https://genome-idx.s3.amazonaws.com/kraken/k2_pluspf_20251015.tar.gz
-mkdir -p kraken2/k2_pluspf_20251015
-tar -xzf /k2_pluspf_20251015.tar.gz -C kraken2/k2_pluspf_20251015
+wget https://genome-idx.s3.amazonaws.com/kraken/k2_pluspf_20260226.tar.gz
+mkdir -p kraken2/k2_pluspf_20260226
+tar -xzf k2_pluspf_20260226.tar.gz -C kraken2/k2_pluspf_20260226
 # rm /db/k2_pluspf_20251015.tar.gz
 cd
 

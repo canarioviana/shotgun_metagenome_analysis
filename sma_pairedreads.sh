@@ -1,7 +1,7 @@
 # Bash script for shotgun metagenome analysis from short-read sequencing data
 #
 # Author: Marcus Vinicius Canário Viana
-# Date: 19/12/2025
+# Date: 04/03/2026
 # More info: see README.md in the repository
 #
 # Instructions:
@@ -19,18 +19,18 @@
     # 1.2) Reads from NCBI SRA
 ## 2) Raw reads quality assessment
     # 2.1) FastQC
-    # 2.2) MultiQC
+    # 2.2) FastQC -> MultiQC
 ## 3) Raw reads trimming
     # 3.1) Fastp
 ## 4) Trimmed reads quality assessment
-    # 4.1) FastQC
-    # 4.2) MultiQC
+    # 4.1) Fastp -> FastQC
+    # 4.2) Fastp -> FastQC -> MultiQC
 ## 5) Host decontamination (optional)
     # 5.1) NCBI Datasets
     # 5.2) Bwa-mem2 index
     # 5.3) Bwa-mem2 mapping
-    # 5.4) FastQC
-    # 5.5) MultiQC
+    # 5.4) Bwa-mem2 -> FastQC
+    # 5.5) Bwa-mem2 -> MultiQC
 ## 6) Taxonomic abundance profile and prophages
     # 6.1) Kraken
     # 6.2) Kraken -> Bracken
@@ -40,15 +40,15 @@
     # 6.6) MetaPhlAn -> Comparison
 ## 7) Metagenome assembly
     # 7.1) MEGAHIT
-    # 7.2) QUAST
+    # 7.2) MEGAHIT -> QUAST
 ## 8) Functional abundance profile
     # 8.1) Barrnap
     # 8.2) Aragorn
     # 8.3) Pyrodigal
-    # 8.4) eggNOG-mapper
-    # 8.5) dbCAN
-    # 8.6) AMRFinderPlus
-    # 8.7) VIBRANT
+    # 8.4) Pyrodigal -> eggNOG-mapper (COG, FunCat, Gene Ontology, HGNC, KEGG, Pfam)
+    # 8.5) Pyrodigal -> dbCAN (dbCAN CAZyme domain HMM database, CAZy database, dbCAN-sub)
+    # 8.6) Pyrodigal -> AMRFinderPlus (NCBI dabatase. Antimicrobial and stress resistance, and virulence genes)
+    # 8.7) MEGAHIT -> VIBRANT (AI: Machine Learning)
 ## 9A) Binning (Single-sample only)
     # 9.1) Bwa-mem2 index
     # 9.2) Bwa-mem2 mapping
@@ -66,13 +66,13 @@
     # 10.5) GTDB-Tk
 ## 11) Bin functional abundance profile
     # 11.1) Prokka
-    # 11.2) eggNOG-mapper
-    # 11.3) dbCAN
-    # 11.4) DeepGOPlus
-    # 11.5) AMRFinderPlus
+    # 11.2) Prokka -> eggNOG-mapper
+    # 11.3) Prokka -> dbCAN
+    # 11.4) Prokka -> DeepGOPlus
+    # 11.5) Prokka -> AMRFinderPlus
 ## 12) Bin mobile genetic elements
     # 12.1) MOB-suite
-    # 12.2) VIBRANT
+    # 12.2) Prokka -> VIBRANT
 
 
 ############################################################
@@ -235,10 +235,6 @@ echo "$workflow_step step finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_w
 
 
 ############################################################
-# 3) Raw reads trimming
-############################################################
-
-############################################################
 ## 3.1) Fastp
 
 # Software name for tracking progress in 0_workflow_progress.txt
@@ -385,10 +381,6 @@ echo "$workflow_step step finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_w
 # 5) Host decontamination (optional)
 ############################################################
 
-# If you want to skip host decontamination, create a soft link that simulates that this step was done
-ln -s 3_fastp 5_bwa_reads
-ls -ld 5_bwa_reads
-
 ############################################################
 ## 5.1) NCBI Datasets (Download reference genomes)
 
@@ -442,7 +434,7 @@ echo "$workflow_step step finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_w
 ############################################################
 ## 5.2) Bwa-mem2 index (Create Bwa-mem2 indexes)
 
-# Software name for tracking progress in progress.txt
+# Software name for tracking progress in 0_workflow_progress.txt
 workflow_step="5) Bwa-mem2 index"
 echo "$workflow_step step started at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
 
@@ -498,7 +490,7 @@ echo "$workflow_step step finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_w
 ############################################################
 ## 5.3) Bwa-mem2 mapping (Filtering out host reads)
 
-# Software name for tracking progress in progress.txt
+# Software name for tracking progress in 0_workflow_progress.txt
 workflow_step="5) Bwa-mem2 mapping"
 echo "$workflow_step step started at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
 
@@ -522,10 +514,17 @@ conda activate bwa-mem2
 tr -d '\r' < 5_metagenomes.tsv |  awk '1' | \
 while IFS=$'\t' read -r sample ref_accession ref_name isolation_source others; do
     # Inform current sample
-    echo "5) Bwa-mem2 is processing sample ${sample} from ${ref_name}:
-    3 (${i}/${sample_count})"
+    echo "5) Bwa-mem2 is processing sample ${sample} from ${ref_name}: (${i}/${sample_count})"
     # Start counting the running time
     start_time=$SECONDS
+
+    # Skip sample if output file already existis
+    output_file="5_bwa_reads/${sample}_trimmed_nohost_1.fq.gz"
+    if [ -f "$output_file" ]; then
+        echo "5) Bwa-mem2 output file already exists for sample: $sample ($output_file). Skipping sample."
+        i=$((i + 1))
+        continue
+    fi
 
     # Run main software (without intermediate files)
     bwa-mem2 mem \
@@ -535,9 +534,9 @@ while IFS=$'\t' read -r sample ref_accession ref_name isolation_source others; d
     "3_fastp/${sample}_trimmed_2.fq.gz" \
     2> "5_bwa_reads/${sample}_alignment.log" \
     | tee >(samtools flagstat - > "5_bwa_reads/${sample}_nofilter_flagstat.txt") \
-    | samtools view -h -b -f 4 -@ 8 - \
+    | samtools view -h -b -f 4 -@ $(nproc --ignore=1) - \
     | tee >(samtools flagstat - > "5_bwa_reads/${sample}_hostfilter_flagstat.txt") \
-    | samtools sort -n -@ 8 - \
+    | samtools sort -n -@ $(nproc --ignore=1) - \
     | samtools fastq -c 6 \
     -1 "5_bwa_reads/${sample}_trimmed_nohost_1.fq.gz" \
     -2 "5_bwa_reads/${sample}_trimmed_nohost_2.fq.gz" \
@@ -565,7 +564,6 @@ done
 conda deactivate
 
 # Generate checksum files for the reads
-echo "Processing checksum of read files at $(date +'%Y-%m-%d %H:%M:%S')"  | tee -a 0_workflow_progress.txt
 cd 5_bwa_reads
 for file in *.gz; do
     echo "Processing checksum of file: ${file}"
@@ -579,7 +577,7 @@ echo "$workflow_step step finished at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_w
 ############################################################
 ## 5.4) FastQC
 
-# Software name for tracking progress in progress.txt
+# Software name for tracking progress in 0_workflow_progress.txt
 workflow_step="5) FastQC"
 echo "$workflow_step step started at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
 
@@ -656,6 +654,14 @@ for r1 in 5_bwa_reads/*_1.fq.gz; do
     # Extract sample name
     sample=${filename%%_*}
 
+    # Skip sample if output file already existis
+    output_file="6_kraken_report/${sample}_kreport.tsv"
+    if [ -f "$output_file" ]; then
+        echo "6) Kraken output file already exists for sample: $sample ($output_file). Skipping sample."
+        i=$((i + 1))
+        continue
+    fi
+
     # Inform current sample
     echo "6) Kraken is processing sample: ${sample} (${i}/${sample_count})"
     # Start counting the running time
@@ -683,10 +689,10 @@ done
 conda deactivate
 
 # Compressing the report directory
-echo "Compressing Kraken report directory."
-tar -c --use-compress-program=pigz -f 6_kraken_report.tar.gz 6_kraken_report
+tar -c --use-compress-program=pigz -f 6_kraken_output.tar.gz 6_kraken_output
 # Generate checksum of file
-md5sum 6_kraken_report.tar.gz > 6_kraken_report.tar.gz.md5
+echo "Processing checksum of compressed report file."
+md5sum 6_kraken_output.tar.gz > 6_kraken_output.tar.gz.md5
 
 # Generate checksum of Kraken output (.kraken.gz) files 
 # Go to target directory
@@ -947,6 +953,14 @@ for r1 in 5_bwa_reads/*_1.fq.gz; do
     # Extract sample name
     sample=${filename%%_*}
 
+    # Skip sample if output file already existis
+    output_file="6_metaphlan/${sample}_mprofile.txt"
+    if [ -f "$output_file" ]; then
+        echo "6) MetaPhlAn output file already exists for sample: $sample ($output_file). Skipping sample."
+        i=$((i + 1))
+        continue
+    fi
+
     # Inform current sample
     echo "6) MetaPhlAn is processing sample: ${sample} (${i}/${sample_count})"
     # Start counting the running time
@@ -954,7 +968,7 @@ for r1 in 5_bwa_reads/*_1.fq.gz; do
 
     # Run main software
     metaphlan \
-     "${r1}","${r2}" \
+    "${r1}","${r2}" \
     --input_type fastq \
     --nproc $(nproc --ignore=1) \
     --verbose \
@@ -992,14 +1006,17 @@ echo "$workflow_step step started at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_wo
 # Create an output directory
 mkdir -p 6_metaphlan_comparison
 
+# Merge abundance tables of all samples
 # Activate Conda environment
 conda activate metaphlan
-
-# Merge abundance tables of all samples
 merge_metaphlan_tables.py 6_metaphlan/*_mprofile.txt \
 > 6_metaphlan_comparison/merged_allsamples_mprofile.txt
+# Deactivate Conda environment
+conda deactivate
 
 # Merge abundance tables per source using information from file 5_metagenomes.tsv
+# Activate Conda environment
+conda activate metaphlan
 input_file="5_metagenomes.tsv" 
 # awk to group samples by source
 awk 'BEGIN {FS="\t"} 
@@ -1036,48 +1053,101 @@ while IFS=$'\t' read -r source sample_list; do
         echo "6) Merging Metaphlan abundance tables for ${source} (${num_samples} samples):"
         merge_metaphlan_tables.py "${input_files_array[@]}" \
         > "6_metaphlan_comparison/merged_${source}_mprofile.txt"
+        # Remove _profile from sample names (line 2) in the output file
+        sed -i '2s/_mprofile//g' "6_metaphlan_comparison/merged_${source}_mprofile.txt"
     else
         echo "6) ⚠️ Skipping Metaphlan merge for ${source}: only ${num_samples} sample(s) found (minimum 2 required)."
-        echo "${source}" > 6_metaphlan_comparison_skiped_soruces.tsv
+        echo "${source}" > 6_metaphlan_comparison_skiped_sources.tsv
     fi
 done
+# Deactivate Conda environment
+conda deactivate
 
-# Calculate beta diversity
+# Calculate alpha and beta diversity
+# Activate Conda environment
+conda activate metaphlan
 # Find path of the script "calculate_diversity.R" in the conda enviroment directory 
 script=$(find $CONDA_PREFIX -name "calculate_diversity.R" 2>/dev/null)
 # Run the script
 for file in 6_metaphlan_comparison/merged_*_mprofile.txt; do
-    output=${file%.txt}
-    Rscript $script \
-    -f ${file} \
-    -d beta \
-    -m bray-curtis \
-    > "${output}_betadiversity.txt"
-done
+    filename=${file##*/}
+    prefix=${filename%.txt}
 
+    # Alpha diversity
+    # Methods: richness, shannon, simpson, and gini
+    for metric in richness shannon simpson gini; do
+        echo "Calculating ALPHA diversity with metric \"${metric}\" for file ${filename}"
+        Rscript $script \
+        -f ${file} \
+        -d alpha \
+        -m ${metric} \
+        -o 6_metaphlan_comparison \
+        -p "${prefix}_alphadiversity"
+    done
+
+    # Beta diversity
+    # Methods: bray-curtis, jaccard, weighted-unifrac, unweighted-unifrac, clr, aitchison
+    for metric in bray-curtis jaccard clr aitchison; do
+        echo "Calculating BETA diversity with metric \"${metric}\" for file ${filename}"
+        Rscript $script \
+        -f ${file} \
+        -d beta \
+        -m ${metric} \
+        -o 6_metaphlan_comparison \
+        -p "${prefix}_betadiversity"
+        # Add a tab to the beginning of the first line to ajust the column name
+        sed -i '1s/^/\t/' "6_metaphlan_comparison/${prefix}_betadiversity_${metric}.tsv"
+    done
+done
+# Deactivate Conda environment
+conda deactivate
+
+# Activate Conda environment
+conda activate metaphlan
 # Heatmap visualization
 for file in 6_metaphlan_comparison/merged_*_mprofile.txt; do
     output=${file%.txt}
-    hclust2.py \
-      -i ${file} \
-      -o "${output}_sqrt_scale.png" \
-      --skip_rows 1 \
-      --ftop 50 \
-      --f_dist_f correlation \
-      --s_dist_f braycurtis \
-      --cell_aspect_ratio 9 \
-      -s --fperc 99 \
-      --flabel_size 4 \
-      --metadata_rows 2,3,4 \
-      --legend_file "${output}_sqrt_scale_legend.png" \
-      --max_flabel_len 100 \
-      --metadata_height 0.075 \
-      --minv 0.01 \
-      --no_slabels \
-      --dpi 300 \
-      --slinkage complete
-done
 
+    # Abundance file at species level
+    grep -E "s__|SRS" ${file} \
+    | grep -v "t__" \
+    | sed "s/^.*|//g" \
+    | sed "s/SRS[0-9]*-//g" \
+    > "${output}_species.txt"
+
+    # Clustering at species level
+    hclust2.py \
+        -i "${output}_species.txt" \
+        -o "${output}_species_sqrt_scale.png" \
+        --skip_rows 1 \
+        --ftop 50 \
+        --f_dist_f correlation \
+        --s_dist_f braycurtis \
+        --cell_aspect_ratio 9 \
+        -s --fperc 99 \
+        --flabel_size 4 \
+        --metadata_rows 2,3,4 \
+        --legend_file "${output}_species_sqrt_scale_legend.png" \
+        --max_flabel_len 100 \
+        --metadata_height 0.075 \
+        --minv 0.01 \
+        --no_slabels \
+        --dpi 300 \
+        --slinkage complete
+
+    # # https://github.com/biobakery/biobakery/wiki/metaphlan4#21-create-a-taxon-by-sample-heatmap-with-hclust2
+    # hclust2.py \
+    #     -i "${output}_species.txt" \
+    #     -o "${output}_species_sqrt_scale.png" \
+    #     --f_dist_f braycurtis \
+    #     --s_dist_f braycurtis \
+    #     --cell_aspect_ratio 0.5 \
+    #     --log_scale \
+    #     --flabel_size 10 --slabel_size 10 \
+    #     --max_flabel_len 100 --max_slabel_len 100 \
+    #     --minv 0.1 \
+    #     --dpi 300
+done
 # Deactivate Conda environment
 conda deactivate
 
@@ -1120,6 +1190,14 @@ for r1 in 5_bwa_reads/*_1.fq.gz; do
     filename=${r1##*/}
     # Extract sample name
     sample=${filename%%_*}
+
+    # Skip sample if output file already existis
+    output_file="7_megahit/${sample}_megahit.fasta"
+    if [ -f "$output_file" ]; then
+        echo "7) MEGAHIT output file already exists for sample: $sample ($output_file). Skipping assembly."
+        i=$((i + 1))
+        continue
+    fi
 
     # Inform current sample
     echo "7) MEGAHIT is assembling sample: $sample (${i}/${sample_count})"
@@ -1173,6 +1251,7 @@ echo "$workflow_step step started at $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_wo
 # Create an output directory
 mkdir -p 7_megahit_quast
 
+# QUAST for each sample
 # Activate Conda environment
 conda activate quast
 #Loop (usar --out-prefix "${sample}" na proxima vez)
@@ -1192,6 +1271,17 @@ for file in 7_megahit/*.fasta; do
     -o "7_megahit_quast/${sample}_quast" \
     "${file}"
 done
+# Deactivate Conda environment
+conda deactivate
+
+# QUAST for all samples
+# Activate Conda environment
+conda activate quast
+    quast.py \
+    -t $(nproc --ignore=1) \
+    -m 0 \
+    -o "7_megahit_quast/all_samples_quast" \
+    7_megahit/*.fasta
 # Deactivate Conda environment
 conda deactivate
 
@@ -1233,6 +1323,14 @@ for file in 7_megahit/*.fasta; do
     filename=${file##*/}
     # Extract sample name
     sample=${filename%%_*}
+
+    # Skip sample if output file already existis
+    output_file="8_barrnap/${sample}_barrnap/${sample}_bac_barrnap.fasta"
+    if [ -f "$output_file" ]; then
+        echo "5) Barrnap output file already exists for sample: $sample ($output_file). Skipping sample."
+        i=$((i + 1))
+        continue
+    fi
 
     # Inform current sample
     echo "8) Barrnap is processing sample: ${sample} (${i}/${sample_count})"
@@ -1303,6 +1401,14 @@ for file in 7_megahit/*.fasta; do
     # Extract sample name
     sample=${filename%%_*}
 
+    # Skip sample if output file already existis
+    output_file="8_aragorn/${sample}_aragorn/${sample}_aragorn.txt"
+    if [ -f "$output_file" ]; then
+        echo "5) Aragorn output file already exists for sample: $sample ($output_file). Skipping sample."
+        i=$((i + 1))
+        continue
+    fi
+
     # Inform current sample
     echo "8) Aragorn is processing sample: ${sample} (${i}/${sample_count})"
     # Start counting the running time
@@ -1358,6 +1464,14 @@ for file in 7_megahit/*.fasta; do
     filename=${file##*/}
     # Extract sample name
     sample=${filename%%_*}
+
+    # Skip sample if output file already existis
+    output_file="8_pyrodigal/${sample}_pyrodigal/${sample}.faa"
+    if [ -f "$output_file" ]; then
+        echo "5) Pyrodigal output file already exists for sample: $sample ($output_file). Skipping sample."
+        i=$((i + 1))
+        continue
+    fi
 
     # Inform current sample
     echo "8) Pyrodigal is processing sample: ${sample} (${i}/${sample_count})"
@@ -1425,6 +1539,14 @@ for file in 8_pyrodigal/*/*.faa; do
     # Extract sample name
     sample=${filename%%.faa}
     
+    # Skip sample if output file already existis
+    output_file="8_emapper/${sample}_emapper/${sample}_emapper.tsv"
+    if [ -f "$output_file" ]; then
+        echo "5) eggNOG-mapper output file already exists for sample: $sample ($output_file). Skipping sample."
+        i=$((i + 1))
+        continue
+    fi
+
     # Inform current sample
     echo "8) eggNOG-mapper is processing sample: ${sample} (${i}/${sample_count})"
     # Start counting the running time
@@ -1488,6 +1610,14 @@ for file in 8_pyrodigal/*/*.faa; do
     # Extract sample name
     sample=${filename%%.faa}
     
+    # Skip sample if output file already existis
+    output_file="8_dbcan/${sample}_dbcan/overview.tsv"
+    if [ -f "$output_file" ]; then
+        echo "5) dbCAN output file already exists for sample: $sample ($output_file). Skipping sample."
+        i=$((i + 1))
+        continue
+    fi
+
     # Inform current sample
     echo "8) dbCAN is processing sample: ${sample} (${i}/${sample_count})"
     # Start counting the running time
@@ -1549,6 +1679,14 @@ for file in 8_pyrodigal/*/*.faa; do
     # Extract sample name
     sample=${filename%%.faa}
     
+    # Skip sample if output file already existis
+    output_file="8_amrfinder/${sample}_amrfinder.tsv"
+    if [ -f "$output_file" ]; then
+        echo "5) AMRFinderPlus output file already exists for sample: $sample ($output_file). Skipping sample."
+        i=$((i + 1))
+        continue
+    fi
+
     # Inform current sample
     echo "8) AMRFinderPlus is processing sample: ${sample} (${i}/${sample_count})"
     # Start counting the running time

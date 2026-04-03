@@ -1,7 +1,7 @@
 # Bash script for shotgun metagenome analysis from short-read sequencing data
 #
 # Author: Marcus Vinicius Canário Viana
-# Date: 01/04/2026
+# Date: 03/04/2026
 # More info: see README.md in the repository
 #
 # Instructions:
@@ -50,9 +50,10 @@
     # 8.6) Pyrodigal -> AMRFinderPlus (NCBI dabatase. Antimicrobial and stress resistance, and virulence genes)
     # 8.7) MEGAHIT -> VIBRANT (AI: Machine Learning)
 ## 9A) Binning (Single-sample only)
-    # 9.1) Bwa-mem2 index
-    # 9.2) Bwa-mem2 mapping
-    # 9.3) SemiBin
+    # 9.1) SeqKit
+    # 9.1) Minimap2 index
+    # 9.2) Minimap2 mapping
+    # 9.3) Semibin binning
 ## 9B) Binning (Single or Multi-sample)
     # 9.1) Seqkit
     # 9.2) SemiBin concatenate_fasta

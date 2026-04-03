@@ -5,7 +5,7 @@
 # This file uses the .sh extension only to enable Bash syntax highlighting in text editors.
 #
 # Author: Marcus Vinicius Canário Viana
-# Date: 19/11/2025
+# Date: 03/14/2025
 # More info: see README.md in the repository
 
 

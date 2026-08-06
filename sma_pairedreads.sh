@@ -1572,7 +1572,7 @@ for file in 8_pyrodigal/*/*.faa; do
     --output_dir "8_emapper/${sample}_emapper"
 
     # Adjust output table
-    tail +5 "8_emapper/${sample}_emapper/${sample}.emapper.annotations" \
+    grep -v '^##' "8_emapper/${sample}_emapper/${sample}.emapper.annotations" \
     > "8_emapper/${sample}_emapper/${sample}_emapper.tsv"
 
     # Stop counting the running time
@@ -3183,7 +3183,7 @@ for dir in 11_prokka/*_prokka/; do
         --output_dir "11_emapper/${sample}_emapper/${binname}_emapper"
 
         # Adjust output table
-        tail +5 "11_emapper/${sample}_emapper/${binname}_emapper/${binname}.emapper.annotations" \
+        grep -v '^##' "11_emapper/${sample}_emapper/${binname}_emapper/${binname}.emapper.annotations" \
         > "11_emapper/${sample}_emapper/${binname}_emapper/${binname}_emapper.tsv"
     done
 

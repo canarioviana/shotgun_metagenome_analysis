@@ -227,19 +227,14 @@ amrfinder_update -d /db/amrfinder
 conda deactivate
 
 ############################################################
-# Aragorn
+# Aragorn (tested version: 1.2.41 )
 # https://github.com/morloclib/aragorn
 conda create -n aragorn -c bioconda aragorn -y
 
 ############################################################
-# Bwa-mem2 (tested version: Bwa-mem2-v2.3)
+# Bwa-mem2 (tested version: v2.3)
 # https://github.com/bwa-mem2/bwa-mem2
 conda create -n bwa-mem2 -c bioconda -c conda-forge bwa-mem2 samtools -y
-
-############################################################
-# Barrnap
-# https://github.com/tseemann/barrnap
-conda create -n barrnap -c bioconda -c conda-forge barrnap gsl=2.5 -y
 
 ############################################################
 # CheckM2 (tested version: 1.0.2, database uniref100.KO.1.dmnd)
@@ -263,22 +258,6 @@ conda deactivate
 conda activate checkm2
 echo $CHECKM2DB
 conda deactivate
-
-############################################################
-# DeepGOPlus (tested version: 1.0.2)
-# https://github.com/bio-ontology-research-group/deepgoplus
-git clone https://github.com/bio-ontology-research-group/deepgoplus.git
-cd deepgoplus
-conda create -n deepgoplus -c bioconda python=3.7 diamond -y
-conda activate deepgoplus
-pip install -r requirements.txt
-pip install deepgoplus
-cd ..
-mkdir -p /db/deepgoplus
-wget http://deepgoplus.bio2vec.net/data/data.tar.gz -P /db/deepgoplus
-tar -zxvf /db/deepgoplus/data.tar.gz -C /db/deepgoplus/
-mv /db/deepgoplus/metadata /db/deepgoplus/data/
-rm /db/deepgoplus/data.tar.gz
 
 ############################################################
 # dbCAN (tested version: 5.2.1)
@@ -344,7 +323,7 @@ conda create -n fastqc -c bioconda fastqc -y
 conda create -n fastp -c bioconda fastp -y
 
 ############################################################
-# GTDB-Tk (tested version: 2.4.1, database r226)
+# GTDB-Tk (tested version: 2.7.2, database r232)
 # https://github.com/Ecogenomics/GTDBTk
 mkdir -p /db/gtdbtk/
 cd /db
@@ -421,6 +400,11 @@ conda install -c conda-forge ncurses
 conda deactivate
 
 ############################################################
+# MMseqs2 (tested version: 18.8cc5c0)
+# https://github.com/soedinglab/mmseqs2
+conda create -n mmseqs2 -c conda-forge -c bioconda mmseqs2 -y
+
+############################################################
 # MOB-suite (Plasmid identification)
 conda create -n mob_suite -c bioconda mob_suite -y
 
@@ -435,8 +419,9 @@ conda create -n multiqc -c bioconda multiqc -y
 conda create -n datasets ncbi-datasets-cli -y
 
 ############################################################
-# Prokka (tested version: 1.14.6)
-conda create -n prokka -c conda-forge prokka -y
+# Pybarrnap (tested version: 0.5.2)
+# https://github.com/moshi4/pybarrnap
+conda create -n pybarrnap -c conda-forge -c bioconda pybarrnap -y
 
 ############################################################
 # Pyrodigal (tested version: 3.6.3)
@@ -444,12 +429,12 @@ conda create -n prokka -c conda-forge prokka -y
 conda create -n pyrodigal -c bioconda pyrodigal -y
 
 ############################################################
-# QUAST (tested version: 5.2.0)
+# QUAST (tested version: 5.3.0)
 # https://github.com/ablab/quast
 conda create -n quast -c bioconda quast -y
 
 ############################################################
-# SemiBin (tested version: 2.2.0)
+# SemiBin (tested version: 2.4.1)
 # https://github.com/BigDataBiology/SemiBin
 # No support to GPU
 conda create -n semibin -c conda-forge -c bioconda semibin -y
@@ -467,7 +452,7 @@ conda install -c conda-forge -c bioconda semibin=2.2.0 -y
 conda deactivate
 
 ############################################################
-# seqkit (Filter sequences by size)
+# SeqKit (tested version: 2.10.1)
 conda create -n seqkit -c bioconda seqkit -y
 
 ############################################################

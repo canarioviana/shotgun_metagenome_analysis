@@ -325,16 +325,15 @@ conda create -n fastp -c bioconda fastp -y
 ############################################################
 # GTDB-Tk (tested version: 2.7.2, database r232)
 # https://github.com/Ecogenomics/GTDBTk
-mkdir -p /db/gtdbtk/
+mkdir -p /db/gtdbtk/latest
 cd /db
 wget https://data.gtdb.ecogenomic.org/releases/latest/auxillary_files/gtdbtk_package/full_package/gtdbtk_data.tar.gz
 #In case it fails you can continue the download with the command below
 #wget -c --progress=bar https://data.gtdb.ecogenomic.org/releases/latest/auxillary_files/gtdbtk_package/full_package/gtdbtk_data.tar.gz
-echo '24b476ea5a4ef30519d461e56cc4a27f gtdbtk_data.tar.gz' | md5sum -c #md5sum for version r226
-tar -xvzf gtdbtk_data.tar.gz -C "/db/gtdbtk" --strip 1 > /dev/null
-conda create -n gtdbtk -c bioconda python=3.10 gtdbtk=2.4.1 -y
+tar -xvzf gtdbtk_data.tar.gz -C "/db/gtdbtk/latest" --strip 1 > /dev/null
+conda create -n gtdbtk -c bioconda gtdbtk=2.7.2 -y
 conda activate gtdbtk
-conda env config vars set GTDBTK_DATA_PATH="/db/gtdbtk"
+conda env config vars set GTDBTK_DATA_PATH="/db/gtdbtk/latest"
 conda deactivate
 conda activate gtdbtk
 echo $GTDBTK_DATA_PATH
@@ -360,19 +359,21 @@ conda deactivate
 # https://github.com/DerrickWood/kraken2
 # https://benlangmead.github.io/aws-indexes/k2
 conda create -n kraken2 -c conda-forge -c bioconda kraken2 krakentools bracken krona r bowtie2 samtools -y
-# Database PlusPF-16 (14.9GB)
+
+# Database PlusPF-16 (14.9 GB after decompression)
 cd /db
-wget https://genome-idx.s3.amazonaws.com/kraken/k2_pluspf_16_GB_20260226.tar.gz
-mkdir -p kraken2/k2_pluspf_16_GB_20260226
-tar -xzf k2_pluspf_16_GB_20260226.tar.gz -C kraken2/k2_pluspf_16_GB_20260226
-# rm k2_pluspf_16_GB_20260226.tar.gz
+wget https://genome-idx.s3.amazonaws.com/kraken/k2_pluspf_16_GB_20260626.tar.gz
+mkdir -p kraken2/k2_pluspf_16_GB_20260626
+tar -xzf k2_pluspf_16_GB_20260626.tar.gz -C kraken2/k2_pluspf_16_GB_20260626
+# rm k2_pluspf_16_GB_20260626.tar.gz
 cd
-# Database PlusPF (100. 6GB)
+
+# Database PlusPF (109.9 GB after decompression)
 cd /db
-wget https://genome-idx.s3.amazonaws.com/kraken/k2_pluspf_20260226.tar.gz
-mkdir -p kraken2/k2_pluspf_20260226
-tar -xzf k2_pluspf_20260226.tar.gz -C kraken2/k2_pluspf_20260226
-# rm /db/k2_pluspf_20251015.tar.gz
+wget https://genome-idx.s3.amazonaws.com/kraken/k2_pluspf_20260626.tar.gz
+mkdir -p kraken2/k2_pluspf_20260626
+tar -xzf k2_pluspf_20260626.tar.gz -C kraken2/k2_pluspf_20260626
+# rm /db/k2_pluspf_20260626.tar.gz
 cd
 
 ############################################################

@@ -21,9 +21,9 @@
 ## A) System requirements
 ############################################################
 # RAM:
-# 16GB is the minimum required
-# 64GB if you run taxonomic analysis with GTDB-Tk
-# 128GB if you want to use the PlusPF database from Kraken 2
+# 16 GB is the minimum required
+# 140 GB if you run taxonomic analysis with GTDB-Tk and database r232, if ANI fails to classify a genome
+# 128 GB if you want to use the PlusPF database from Kraken 2
 #
 # Static IP address (For use on a computer server)
 

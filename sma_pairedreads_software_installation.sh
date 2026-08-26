@@ -407,6 +407,7 @@ conda create -n mmseqs2 -c conda-forge -c bioconda mmseqs2 -y
 
 ############################################################
 # MOB-suite (Plasmid identification)
+# https://github.com/phac-nml/mob-suite
 conda create -n mob_suite -c bioconda mob_suite -y
 
 ############################################################
@@ -454,10 +455,12 @@ conda deactivate
 
 ############################################################
 # SeqKit (tested version: 2.10.1)
+# https://github.com/shenwei356/seqkit
 conda create -n seqkit -c bioconda seqkit -y
 
 ############################################################
 # SRA Tools (tested version: 3.2.1)
+# https://github.com/ncbi/sra-tools
 conda create -n sra-tools -c bioconda sra-tools -y
 
 ############################################################

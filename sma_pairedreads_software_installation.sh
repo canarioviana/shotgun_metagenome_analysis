@@ -331,7 +331,7 @@ wget https://data.gtdb.ecogenomic.org/releases/latest/auxillary_files/gtdbtk_pac
 #In case it fails you can continue the download with the command below
 #wget -c --progress=bar https://data.gtdb.ecogenomic.org/releases/latest/auxillary_files/gtdbtk_package/full_package/gtdbtk_data.tar.gz
 tar -xvzf gtdbtk_data.tar.gz -C "/db/gtdbtk/latest" --strip 1 > /dev/null
-conda create -n gtdbtk -c bioconda gtdbtk -y
+conda create -n gtdbtk -c conda-forge -c bioconda gtdbtk=2.7.2 -y
 conda activate gtdbtk
 conda env config vars set GTDBTK_DATA_PATH="/db/gtdbtk/latest"
 conda deactivate

@@ -397,7 +397,7 @@ conda create -n graphlan -c biobakery graphlan -y
 # https://github.com/lh3/minimap2
 conda create -n minimap2 -c bioconda minimap2 samtools -y
 conda activate minimap2
-conda install -c conda-forge ncurses
+conda install -c conda-forge ncurses -y
 conda deactivate
 
 ############################################################

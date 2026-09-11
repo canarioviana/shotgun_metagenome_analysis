@@ -363,16 +363,16 @@ conda create -n kraken2 -c conda-forge -c bioconda kraken2 krakentools bracken k
 # Database PlusPF-16 (14.9 GB after decompression)
 cd /db
 wget https://genome-idx.s3.amazonaws.com/kraken/k2_pluspf_16_GB_20260626.tar.gz
-mkdir -p kraken2/k2_pluspf_16_GB_20260626
-tar -xzf k2_pluspf_16_GB_20260626.tar.gz -C kraken2/k2_pluspf_16_GB_20260626
+mkdir -p kraken/k2_pluspf_16_GB_20260626
+tar -xzf k2_pluspf_16_GB_20260626.tar.gz -C kraken/k2_pluspf_16_GB_20260626
 # rm k2_pluspf_16_GB_20260626.tar.gz
 cd
 
 # Database PlusPF (109.9 GB after decompression)
 cd /db
 wget https://genome-idx.s3.amazonaws.com/kraken/k2_pluspf_20260626.tar.gz
-mkdir -p kraken2/k2_pluspf_20260626
-tar -xzf k2_pluspf_20260626.tar.gz -C kraken2/k2_pluspf_20260626
+mkdir -p kraken/k2_pluspf_20260626
+tar -xzf k2_pluspf_20260626.tar.gz -C kraken/k2_pluspf_20260626
 # rm /db/k2_pluspf_20260626.tar.gz
 cd
 

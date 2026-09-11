@@ -196,7 +196,7 @@ sudo chmod -R o+rx /db
 sudo apt-get install bioperl -y
 sudo apt-get install build-essential -y
 sudo apt-get install cmake -y
-sudo apt-get install -y gawk -y
+sudo apt-get install gawk -y
 sudo apt-get install git -y
 sudo apt-get install glibc-source -y
 sudo apt-get install gzip -y

@@ -9,7 +9,6 @@ It also includes detailed instructions for the installation of all necessary sof
 ## Usage Guidelines
 
 * The scripts provide comprehensive **software installation instructions** and **a worfkflow for metagenomic analysis**
-* 
 * **_end2end.sh Files (Workflow):** These scripts encapsulate the complete workflow and **can be executed at once** (end-to-end). To execute them:
     
     * **Grant execution permission:**

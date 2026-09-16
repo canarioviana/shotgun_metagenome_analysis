@@ -8,7 +8,18 @@ It also includes detailed instructions for the installation of all necessary sof
 
 ## Usage Guidelines
 
-* The scripts provide comprehensive **software installation instructions** and **a worfkflow for metagenome analysis**.
+* The scripts provide comprehensive **software installation instructions** and **a worfkflow for metagenomic analysis**
+* 
+* **_end2end.sh Files (Workflow):** These scripts encapsulate the complete workflow and **can be executed at once** (end-to-end). To execute them:
+    
+    * **Grant execution permission:**
+        ```bash
+        chmod +x XXX_end2end.sh
+        ```
+    * **Run the script:**
+        ```bash
+        ./XXX_end2end.sh
+        ```
 
 * **_script.sh Files (Modular Commands):** These files are collections of commands grouped by function (e.g., QC only, assembly only).
 
@@ -17,6 +28,8 @@ It also includes detailed instructions for the installation of all necessary sof
     * Instead, you should copy (or modify) and paste the relevant command lines directly into your Linux terminal as needed for modular use.
 
 ---
+
+
 
 ## The Shotgun Metagenome Analysis Workflow
 

@@ -87,10 +87,10 @@
 
 # ## Metadata for sequencing reads from NCBI SRA
 
-# 1. Create a **tab-separated file** named **"0_reads_accessions.tsv"**.
+# 1. Create a **tab-separated file** named **"reads_accessions.tsv"**.
 # 2. This file **must contain** the NCBI SRA **accession number** in the first column and the **sample name** in the second column. Other columns will be ignored.
 # 3. **Do not use** special characters in the sample names.
-# 4. Place the **"0_reads_accessions.tsv"** file in the working directory.
+# 4. Place the **"reads_accessions.tsv"** file in the working directory.
 
 # ---
 
@@ -167,17 +167,17 @@ workflow_step="0) Metadata check"
 # Update the file 0_workflow_progress.txt
 echo "▶▶▶  ${workflow_step} started @ $(date +'%Y-%m-%d %H:%M:%S') ▶▶▶" | tee -a 0_workflow_progress.txt
 
-# Check if reads metadata file '0_reads_accessions.tsv' exists and is not empty
-if [ -f "0_reads_accessions.tsv" ]; then
-    if [ ! -s "0_reads_accessions.tsv" ]; then
-        echo "✗  ERROR: Metadata file for reads from NCBI SRA '0_reads_accessions.tsv' exists but is empty!" | tee -a 0_workflow_progress.txt
+# Check if reads metadata file 'reads_accessions.tsv' exists and is not empty
+if [ -f "reads_accessions.tsv" ]; then
+    if [ ! -s "reads_accessions.tsv" ]; then
+        echo "✗  ERROR: Metadata file for reads from NCBI SRA 'reads_accessions.tsv' exists but is empty!" | tee -a 0_workflow_progress.txt
         exit 1
     fi
-    echo "✔  Metadata file for reads from NCBI SRA '0_reads_accessions.tsv' found and non-empty." | tee -a 0_workflow_progress.txt
+    echo "✔  Metadata file for reads from NCBI SRA 'reads_accessions.tsv' found and non-empty." | tee -a 0_workflow_progress.txt
     # Remove Windows CRLF line endings
-    sed -i 's/\r$//' 0_reads_accessions.tsv
+    sed -i 's/\r$//' reads_accessions.tsv
 else
-    echo "⚠️  Metadata file for reads from NCBI SRA '0_reads_accessions.tsv' not found. Local files will be verified later." | tee -a 0_workflow_progress.txt
+    echo "⚠️  Metadata file for reads from NCBI SRA 'reads_accessions.tsv' not found. Local files will be verified later." | tee -a 0_workflow_progress.txt
 fi
 
 # Check if reference genome metadata file 'ref_genomes_ids.tsv' exists and is not empty
@@ -258,9 +258,9 @@ shopt -s nullglob
 # Delete previous file of not used reads
 rm -f 1_reads_not_pe.tsv
 
-# Verify the presence of the file 0_reads_accessions.tsv with a list of accessions
-if [ -f 0_reads_accessions.tsv ]; then
-    echo "✔  The file 0_reads_accessions.tsv was found. The sequencing reads will be downloaded."
+# Verify the presence of the file reads_accessions.tsv with a list of accessions
+if [ -f reads_accessions.tsv ]; then
+    echo "✔  The file reads_accessions.tsv was found. The sequencing reads will be downloaded."
 
     # Create output directory
     mkdir -p 1_reads
@@ -270,7 +270,7 @@ if [ -f 0_reads_accessions.tsv ]; then
     conda activate sra-tools
 
     # Loop through file lines
-    tr -d '\r' < 0_reads_accessions.tsv |  awk '1'| \
+    tr -d '\r' < reads_accessions.tsv |  awk '1'| \
     while IFS=$'\t' read -r accession sample others; do
 
         # Check for valid, complete paired-end or single-end output
@@ -343,7 +343,7 @@ if [ -f 0_reads_accessions.tsv ]; then
     # Deactivate Conda environment
     conda deactivate
 else
-    echo "⚠️  The file 0_reads_accessions.tsv was not found. Proceeding using local files."
+    echo "⚠️  The file reads_accessions.tsv was not found. Proceeding using local files."
 fi
 
 ############################################################

@@ -28,23 +28,23 @@ It also includes detailed instructions for the installation of all necessary sof
 
 ---
 
-* Metadata for sequencing reads from NCBI SRA
+* Metadata for sequencing reads from NCBI SRA (reads_accessions.tsv)
 
-1. Create a **tab-separated file** named **"0_reads_accessions.tsv"**.
+1. Create a **tab-separated file** named **"reads_accessions.tsv"**.
 2. This file **must contain** the NCBI SRA **accession number** in the first column and the **sample name** in the second column. Other columns will be ignored.
 3. **Do not use** special characters in the sample names.
 4. Place the **"0_reads_accessions.tsv"** file in the working directory.
 
 ---
 
-* Sequencing reads as local files
+* Sequencing reads as local files (*_1.fq.gz and *_2.fq.gz)
 
 1. The sequencing reads must be in FASTQ format and compressed, with the suffixes `_1.fq.gz` and `_2.fq.gz`, or `_1.fastq.gz` and `_2.fastq.gz` or `_R1_001.fastq.gz` and `_R2_001.fastq.gz`
 2. In the working directory, create the directory `1_reads/` and place the read files inside it.
 
 ---
 
-* Metadata for samples
+* Metadata for samples (metagenomes.tsv)
 
 1. Create a tab-separated text file named `metagenomes.tsv` in the **working directory**, containing four columns in the following order. Any subsequent columns will be ignored:
 
@@ -57,7 +57,7 @@ It also includes detailed instructions for the installation of all necessary sof
 
 ---
 
-* Metadata for reference genomes from GenBank
+* Metadata for reference genomes from GenBank (ref_genomes_ids.tsv)
 
 1. Create a tab-separated text file named `ref_genomes_ids.tsv` containing the following columns in this order. Any subsequent columns will be ignored:
 

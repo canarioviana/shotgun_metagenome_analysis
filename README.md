@@ -29,70 +29,75 @@ It also includes detailed instructions for the installation of all necessary sof
 
 ---
 
-
-
 ## The Shotgun Metagenome Analysis Workflow
 
 1) Reads files and renaming
+    * Reads from NCBI SRA (sra-tools)
     * Reads stored as local files
-    * Reads from NCBI SRA
 2) Raw reads quality assessment
     * FastQC
-    * MultiQC
+    * FastQC -> MultiQC
 3) Raw reads trimming
     * Fastp
 4) Trimmed reads quality assessment
     * FastQC
-    * MultiQC
+    * FastQC -> MultiQC
 5) Host decontamination (optional)
     * NCBI Datasets
     * Bwa-mem2 index
-    * Bwa-mem2 mapping
+    * Bwa-mem2 mem
     * Bwa-mem2 reads
-    * FastQC
-    * MultiQC
+    * Bwa-mem2 -> FastQC
+    * Bwa-mem2 -> FastQC -> MultiQC
 6) Taxonomic abundance profile
     * Kraken
     * Kraken -> Bracken
-    * Bracken -> Krona
-    * Bracken -> Comparison
+    * Kraken -> Bracken -> Comparison
+    * Kraken -> Bracken -> Krona
     * MetaPhlAn
     * MetaPhlAn -> Comparison
 7) Metagenome assembly
     * MEGAHIT
-    * QUAST
+    * MEGAHIT -> QUAST
 8) Functional abundance profile and prophages
-    * Barrnap
+    * Pybarrnap
     * Aragorn
     * Pyrodigal
-    * eggNOG-mapper
-    * dbCAN
-    * AMRFinderPlus
-    * VIBRANT 
-9) Binning
-    * Method A - Single-sample: SeqKit
-    * Method A - Single-sample: Minimap2 index
-    * Method A - Single-sample: Minimap2 mapping
-    * Method A - Single-sample: SemiBin binning
-    * Method B - Single/Multi-sample: Seqkit
-    * Method B - Single/Multi-sample: SemiBin concatenate_fasta
-    * Method B - Single/Multi-sample: Minimap2 index
-    * Method B - Single/Multi-sample: Minimap2 mapping
-    * Method B - Single/Multi-sample: Semibin binning
-11) Bin quality control and taxonomy
-    * QUAST
+    * Pyrodigal -> AMRFinderPlus
+    * Pyrodigal -> dbCAN
+    * Pyrodigal -> eggNOG-mapper
+    * Pyrodigal -> VFDB (BLASTP)
+9) Functional abundance profile of gene catalog
+    * MMseqs2 input (SeqKit)
+    * MMseqs2 easy-linclust
+    * MMseqs2 -> AMRFinderPlus
+    * MMseqs2 -> dbCAN
+    * MMseqs2 -> eggNOG-mapper
+    * MMseqs2 -> Pyrodigal -> VFDB (BLASTP)
+    * MMseqs2 -> Salmon index
+    * MMseqs2 -> Salmon quant
+10) Binning - Single/Multi-sample - Input files
+    * Seqkit
+    * Seqkit -> SemiBin concatenate_fasta
+    * Seqkit -> SemiBin concatenate_fasta -> Minimap2 index
+    * Seqkit -> SemiBin concatenate_fasta -> Minimap2
+11) Binning - Single/Multi-sample (Self-supervised mode)
+    * SemiBin
+12) Bin quality control and taxonomy
     * CheckM2
     * GUNC
-    * Barrnap
     * GTDB-Tk
-12) Bin functional abundance profile
-    * Prokka
-    * eggNOG-mapper
-    * dbCAN
-    * DeepGOPlus
-    * AMRFinderPlus
-13) Bin mobile genetic elements
-    * MOB-suite 
+    * QUAST
+13) Bin functional abundance profile
+    * Aragorn
+    * Pybarrnap
+    * Pyrodigal
+    * Pyrodigal -> AMRFinderPlus
+    * Pyrodigal -> dbCAN
+    * Pyrodigal -> eggNOG-mapper
+    * Pyrodigal -> VFDB (BLASTP)
+14) Bin mobile genetic elements
+    * MOB-suite
     * VIBRANT
 
 

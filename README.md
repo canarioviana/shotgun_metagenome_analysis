@@ -29,6 +29,46 @@ It also includes detailed instructions for the installation of all necessary sof
 
 ---
 
+* Metadata for sequencing reads from NCBI SRA
+
+1. Create a **tab-separated file** named **"0_reads_accessions.tsv"**.
+2. This file **must contain** the NCBI SRA **accession number** in the first column and the **sample name** in the second column. Other columns will be ignored.
+3. **Do not use** special characters in the sample names.
+4. Place the **"0_reads_accessions.tsv"** file in the working directory.
+
+---
+
+* Sequencing reads as local files
+
+1. The sequencing reads must be in FASTQ format and compressed, with the suffixes `_1.fq.gz` and `_2.fq.gz`, or `_1.fastq.gz` and `_2.fastq.gz` or `_R1_001.fastq.gz` and `_R2_001.fastq.gz`
+2. In the working directory, create the directory `1_reads/` and place the read files inside it.
+
+---
+
+* Metadata for samples
+
+1. Create a tab-separated text file named `metagenomes.tsv` in the **working directory**, containing four columns in the following order. Any subsequent columns will be ignored:
+
+| Column | Description |
+| :--- | :--- |
+| **`sample`** | The sample name. |
+| **`ref_accession`** | The GenBank genome assembly ID of the reference genome. Used to register the specific version of the reference genome assembly. If the sample is not host-associated, use `NA`, `none`, or leave empty. |
+| **`ref_name`** | The species name of the reference genome. Use the same name as in the `ref_name` column of `ref_genomes_ids.tsv`. If the sample is not host-associated, use `NA`, `none`, or leave empty. |
+| **`isolation_source`** | The species name of the sample host (or isolation source). This will be used in the binning step. |
+
+---
+
+* Metadata for reference genomes from GenBank
+
+1. Create a tab-separated text file named `ref_genomes_ids.tsv` containing the following columns in this order. Any subsequent columns will be ignored:
+
+| Column | Description |
+| :--- | :--- |
+| **`ref_accession`** | The GenBank genome assembly ID of the reference genome. Used to download the specific version of the reference genome assembly. |
+| **`ref_name`** | The species name of the reference genome. Must match the name used to create the BWA-MEM2 index. |
+
+---
+
 ## The Shotgun Metagenome Analysis Workflow
 
 1) Reads files and renaming
@@ -99,12 +139,3 @@ It also includes detailed instructions for the installation of all necessary sof
 14) Bin mobile genetic elements
     * MOB-suite
     * VIBRANT
-
-
-
-
-
-
-
-
-

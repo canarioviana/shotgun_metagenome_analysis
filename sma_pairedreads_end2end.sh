@@ -4,7 +4,7 @@
 # Script for metagenomic analysis of the gut microbiome from non-human primates
 # This script is under development
 # Author: Marcus V. C. Viana
-# Date: 16/09/2026
+# Date: 20/09/2026
 
 
 ############################################################
@@ -31,7 +31,7 @@
 #     * Bwa-mem2 reads
 #     * Bwa-mem2 -> FastQC
 #     * Bwa-mem2 -> FastQC -> MultiQC
-#     * SeqKit stats
+#     * Bwa-mem2 -> SeqKit stats
 # 6) Taxonomic abundance profile
 #     * Kraken
 #     * Kraken -> Bracken

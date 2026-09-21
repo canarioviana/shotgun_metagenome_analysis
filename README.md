@@ -76,11 +76,13 @@ It also includes detailed instructions for the installation of all necessary sof
 2) Raw reads quality assessment
     * FastQC
     * FastQC -> MultiQC
+    * SeqKit stats
 3) Raw reads trimming
     * Fastp
 4) Trimmed reads quality assessment
     * FastQC
     * FastQC -> MultiQC
+    * SeqKit stats
 5) Host decontamination (optional)
     * NCBI Datasets
     * Bwa-mem2 index
@@ -88,6 +90,7 @@ It also includes detailed instructions for the installation of all necessary sof
     * Bwa-mem2 reads
     * Bwa-mem2 -> FastQC
     * Bwa-mem2 -> FastQC -> MultiQC
+    * Bwa-mem2 -> SeqKit stats
 6) Taxonomic abundance profile
     * Kraken
     * Kraken -> Bracken

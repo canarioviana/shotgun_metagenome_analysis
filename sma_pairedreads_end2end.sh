@@ -17,11 +17,13 @@
 # 2) Raw reads quality assessment
 #     * FastQC
 #     * FastQC -> MultiQC
+#     * SeqKit stats
 # 3) Raw reads trimming
 #     * Fastp
 # 4) Trimmed reads quality assessment
 #     * FastQC
 #     * FastQC -> MultiQC
+#     * SeqKit stats
 # 5) Host decontamination (optional)
 #     * NCBI Datasets
 #     * Bwa-mem2 index
@@ -29,6 +31,7 @@
 #     * Bwa-mem2 reads
 #     * Bwa-mem2 -> FastQC
 #     * Bwa-mem2 -> FastQC -> MultiQC
+#     * SeqKit stats
 # 6) Taxonomic abundance profile
 #     * Kraken
 #     * Kraken -> Bracken
@@ -598,6 +601,70 @@ running_time=$(printf "%02d:%02d:%02d" "$hours" "$minutes" "$seconds")
 # Update the file 0_workflow_progress.txt
 echo -e "■■■  ${workflow_step} finished @ $(date +'%Y-%m-%d %H:%M:%S') — Total: ${running_time} ■■■\n" | tee -a 0_workflow_progress.txt
 
+############################################################
+## 2.3) SeqKit stats
+
+# Avoid literal glob pattern
+shopt -s nullglob
+
+# Software name for tracking progress in 0_workflow_progress.txt
+workflow_step="2) SeqKit stats"
+# Input directory and output file of this step
+input_dir="1_reads"
+output_file="2_seqkit_stats.tsv"
+# Update the file 0_workflow_progress.txt
+echo "▶▶▶  ${workflow_step} started @ $(date +'%Y-%m-%d %H:%M:%S') ▶▶▶" | tee -a 0_workflow_progress.txt
+# Start counting the running time
+start_time=$SECONDS
+
+# Skip if this step already completed successfully (final archive present and valid)
+if [ -f "${output_file}" ] && [ -f "${output_file}.md5" ] && md5sum -c "${output_file}.md5" >/dev/null 2>&1; then
+    echo "✔  ${workflow_step} already completed successfully (${output_file} verified). Skipping step." | tee -a 0_workflow_progress.txt
+else
+    # Guard against empty input (same glob that is passed to seqkit below)
+    reads_files=("${input_dir}"/*.fq.gz)
+    if [ ${#reads_files[@]} -eq 0 ]; then
+        echo "✗  ERROR: No .fq.gz files found in ${input_dir}/ for Seqkit." | tee -a 0_workflow_progress.txt
+        exit 1
+    fi
+
+    # Activate Conda environment
+    conda activate seqkit
+    # Run main software
+    seqkit stats -a -b -T "${input_dir}"/*.fq.gz > "${output_file}"
+    # Deactivate Conda environment
+    conda deactivate
+
+    # seqkit stats exits 0 even when an input gzip is truncated/corrupted (it only prints [ERRO]
+    # and stops writing rows), so check that there is exactly one row per input file
+    expected_rows=${#reads_files[@]}
+    actual_rows=$(( $(wc -l < "${output_file}") - 1 ))
+    if [ "${actual_rows}" -ne "${expected_rows}" ]; then
+        echo "✗  ERROR: ${output_file}: expected ${expected_rows} rows but got ${actual_rows} (check the [ERRO] message above; test the files with 'gzip -t')" | tee -a 0_workflow_progress.txt
+        rm -f "${output_file}"
+        exit 1
+    fi
+
+    # Generate checksum file of the output file
+    md5sum "${output_file}" > "${output_file}".md5
+    # Check file integrity
+    echo "${workflow_step}: Checking file integrity" | tee -a 0_workflow_progress.txt
+    if ! md5sum -c "${output_file}".md5 | tee -a 0_workflow_progress.txt; then
+        echo "✗  ERROR: ${output_file}: integrity check failed" | tee -a 0_workflow_progress.txt
+        exit 1
+    fi
+fi
+
+# Stop counting the running time
+elapsed_time=$((SECONDS - $start_time))
+# Calculate the running time
+hours=$((elapsed_time / 3600))
+minutes=$(((elapsed_time % 3600) / 60))
+seconds=$((elapsed_time % 60))
+running_time=$(printf "%02d:%02d:%02d" "$hours" "$minutes" "$seconds")
+# Update the file 0_workflow_progress.txt
+echo -e "■■■  ${workflow_step} finished @ $(date +'%Y-%m-%d %H:%M:%S') — Total: ${running_time} ■■■\n" | tee -a 0_workflow_progress.txt
+
 
 ############################################################
 # 3) Raw reads trimming
@@ -877,6 +944,70 @@ else
 
     # Delete the output directory
     rm -r 4_fastqc 4_fastqc_multiqc
+fi
+
+# Stop counting the running time
+elapsed_time=$((SECONDS - $start_time))
+# Calculate the running time
+hours=$((elapsed_time / 3600))
+minutes=$(((elapsed_time % 3600) / 60))
+seconds=$((elapsed_time % 60))
+running_time=$(printf "%02d:%02d:%02d" "$hours" "$minutes" "$seconds")
+# Update the file 0_workflow_progress.txt
+echo -e "■■■  ${workflow_step} finished @ $(date +'%Y-%m-%d %H:%M:%S') — Total: ${running_time} ■■■\n" | tee -a 0_workflow_progress.txt
+
+############################################################
+## 4.3) SeqKit stats
+
+# Avoid literal glob pattern
+shopt -s nullglob
+
+# Software name for tracking progress in 0_workflow_progress.txt
+workflow_step="4) SeqKit stats"
+# Input directory and output file of this step
+input_dir="3_fastp"
+output_file="4_seqkit_stats.tsv"
+# Update the file 0_workflow_progress.txt
+echo "▶▶▶  ${workflow_step} started @ $(date +'%Y-%m-%d %H:%M:%S') ▶▶▶" | tee -a 0_workflow_progress.txt
+# Start counting the running time
+start_time=$SECONDS
+
+# Skip if this step already completed successfully (final archive present and valid)
+if [ -f "${output_file}" ] && [ -f "${output_file}.md5" ] && md5sum -c "${output_file}.md5" >/dev/null 2>&1; then
+    echo "✔  ${workflow_step} already completed successfully (${output_file} verified). Skipping step." | tee -a 0_workflow_progress.txt
+else
+    # Guard against empty input (same glob that is passed to seqkit below)
+    reads_files=("${input_dir}"/*.fq.gz)
+    if [ ${#reads_files[@]} -eq 0 ]; then
+        echo "✗  ERROR: No .fq.gz files found in ${input_dir}/ for Seqkit." | tee -a 0_workflow_progress.txt
+        exit 1
+    fi
+
+    # Activate Conda environment
+    conda activate seqkit
+    # Run main software
+    seqkit stats -a -b -T "${input_dir}"/*.fq.gz > "${output_file}"
+    # Deactivate Conda environment
+    conda deactivate
+
+    # seqkit stats exits 0 even when an input gzip is truncated/corrupted (it only prints [ERRO]
+    # and stops writing rows), so check that there is exactly one row per input file
+    expected_rows=${#reads_files[@]}
+    actual_rows=$(( $(wc -l < "${output_file}") - 1 ))
+    if [ "${actual_rows}" -ne "${expected_rows}" ]; then
+        echo "✗  ERROR: ${output_file}: expected ${expected_rows} rows but got ${actual_rows} (check the [ERRO] message above; test the files with 'gzip -t')" | tee -a 0_workflow_progress.txt
+        rm -f "${output_file}"
+        exit 1
+    fi
+
+    # Generate checksum file of the output file
+    md5sum "${output_file}" > "${output_file}".md5
+    # Check file integrity
+    echo "${workflow_step}: Checking file integrity" | tee -a 0_workflow_progress.txt
+    if ! md5sum -c "${output_file}".md5 | tee -a 0_workflow_progress.txt; then
+        echo "✗  ERROR: ${output_file}: integrity check failed" | tee -a 0_workflow_progress.txt
+        exit 1
+    fi
 fi
 
 # Stop counting the running time
@@ -1423,6 +1554,70 @@ else
 
     # Delete the output directory
     rm -r 5_bwa_reads_fastqc 5_bwa_reads_fastqc_multiqc
+fi
+
+# Stop counting the running time
+elapsed_time=$((SECONDS - $start_time))
+# Calculate the running time
+hours=$((elapsed_time / 3600))
+minutes=$(((elapsed_time % 3600) / 60))
+seconds=$((elapsed_time % 60))
+running_time=$(printf "%02d:%02d:%02d" "$hours" "$minutes" "$seconds")
+# Update the file 0_workflow_progress.txt
+echo -e "■■■  ${workflow_step} finished @ $(date +'%Y-%m-%d %H:%M:%S') — Total: ${running_time} ■■■\n" | tee -a 0_workflow_progress.txt
+
+############################################################
+## 5.3) SeqKit stats
+
+# Avoid literal glob pattern
+shopt -s nullglob
+
+# Software name for tracking progress in 0_workflow_progress.txt
+workflow_step="5) SeqKit stats"
+# Input directory and output file of this step
+input_dir="5_bwa_reads"
+output_file="5_bwa_reads_seqkit_stats.tsv"
+# Update the file 0_workflow_progress.txt
+echo "▶▶▶  ${workflow_step} started @ $(date +'%Y-%m-%d %H:%M:%S') ▶▶▶" | tee -a 0_workflow_progress.txt
+# Start counting the running time
+start_time=$SECONDS
+
+# Skip if this step already completed successfully (final archive present and valid)
+if [ -f "${output_file}" ] && [ -f "${output_file}.md5" ] && md5sum -c "${output_file}.md5" >/dev/null 2>&1; then
+    echo "✔  ${workflow_step} already completed successfully (${output_file} verified). Skipping step." | tee -a 0_workflow_progress.txt
+else
+    # Guard against empty input (same glob that is passed to seqkit below)
+    reads_files=("${input_dir}"/*.fq.gz)
+    if [ ${#reads_files[@]} -eq 0 ]; then
+        echo "✗  ERROR: No .fq.gz files found in ${input_dir}/ for Seqkit." | tee -a 0_workflow_progress.txt
+        exit 1
+    fi
+
+    # Activate Conda environment
+    conda activate seqkit
+    # Run main software
+    seqkit stats -a -b -T "${input_dir}"/*.fq.gz > "${output_file}"
+    # Deactivate Conda environment
+    conda deactivate
+
+    # seqkit stats exits 0 even when an input gzip is truncated/corrupted (it only prints [ERRO]
+    # and stops writing rows), so check that there is exactly one row per input file
+    expected_rows=${#reads_files[@]}
+    actual_rows=$(( $(wc -l < "${output_file}") - 1 ))
+    if [ "${actual_rows}" -ne "${expected_rows}" ]; then
+        echo "✗  ERROR: ${output_file}: expected ${expected_rows} rows but got ${actual_rows} (check the [ERRO] message above; test the files with 'gzip -t')" | tee -a 0_workflow_progress.txt
+        rm -f "${output_file}"
+        exit 1
+    fi
+
+    # Generate checksum file of the output file
+    md5sum "${output_file}" > "${output_file}".md5
+    # Check file integrity
+    echo "${workflow_step}: Checking file integrity" | tee -a 0_workflow_progress.txt
+    if ! md5sum -c "${output_file}".md5 | tee -a 0_workflow_progress.txt; then
+        echo "✗  ERROR: ${output_file}: integrity check failed" | tee -a 0_workflow_progress.txt
+        exit 1
+    fi
 fi
 
 # Stop counting the running time

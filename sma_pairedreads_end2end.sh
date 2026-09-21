@@ -387,10 +387,6 @@ if [ ${#fastq_files[@]} -gt 0 ]; then
 
     md5_files=(1_reads/*_1.fastq.gz.md5)
     if [ ${#md5_files[@]} -gt 0 ]; then
-        # FIX: content sed must match ".../_1.fastq.gz" (the data filename referenced
-        # inside the checksum), not "..._1.fastq.gz.md5" (the .md5 filename itself) —
-        # the old pattern never matched, so checksums kept pointing at the old
-        # .fastq.gz names after they'd already been renamed to .fq.gz.
         sed -i 's/\_1.fastq\.gz$/\_1.fq.gz/; s/\_2.fastq\.gz$/\_2.fq.gz/' 1_reads/*.md5 2>/dev/null
         rename 's/\_1.fastq\.gz\.md5$/\_1.fq.gz\.md5/; s/\_2.fastq\.gz\.md5$/\_2.fq.gz\.md5/' 1_reads/*.fastq.gz.md5 2>/dev/null
     fi
@@ -429,9 +425,6 @@ echo "✔  All read files verified successfully and paired properly." | tee -a 0
 ## Verify that every sample in metagenomes.tsv has matching read files in 1_reads
 
 echo "Verify that every sample in metagenomes.tsv has matching read files in 1_reads" | tee -a 0_workflow_progress.txt
-# Catch a naming mismatch between the 'sample' column of metagenomes.tsv and the actual
-# read file names here, right after step 1 produces/standardizes 1_reads/ — instead of
-# only downstream, in step 5, as a confusing samtools error mid-pipe.
 missing_reads=0
 while IFS=$'\t' read -r sample ref_accession ref_name isolation_source others; do
     [ -z "$sample" ] && continue
@@ -635,8 +628,7 @@ else
     # Deactivate Conda environment
     conda deactivate
 
-    # seqkit stats exits 0 even when an input gzip is truncated/corrupted (it only prints [ERRO]
-    # and stops writing rows), so check that there is exactly one row per input file
+    # Check that there is exactly one row per input file
     expected_rows=${#reads_files[@]}
     actual_rows=$(( $(wc -l < "${output_file}") - 1 ))
     if [ "${actual_rows}" -ne "${expected_rows}" ]; then
@@ -834,8 +826,7 @@ start_time=$SECONDS
 if [ -f "4_fastqc.tar.gz" ] && [ -f "4_fastqc.tar.gz.md5" ] && md5sum -c "4_fastqc.tar.gz.md5" >/dev/null 2>&1; then
     echo "✔  ${workflow_step} already completed successfully (4_fastqc.tar.gz verified). Skipping step." | tee -a 0_workflow_progress.txt
 else
-    # A previous interrupted run may have left a partial directory or archive; wipe and redo,
-    # since FastQC runs as a single call over all files and has no reliable per-file resume here.
+    # Remove a previous interrupted run
     if [ -d "4_fastqc" ]; then
         echo "${workflow_step}: Found incomplete 4_fastqc directory from a previous interrupted run. Removing it to start fresh." | tee -a 0_workflow_progress.txt
         rm -rf "4_fastqc"
@@ -904,7 +895,7 @@ start_time=$SECONDS
 if [ -f "4_fastqc_multiqc.tar.gz" ] && [ -f "4_fastqc_multiqc.tar.gz.md5" ] && md5sum -c "4_fastqc_multiqc.tar.gz.md5" >/dev/null 2>&1; then
     echo "✔  ${workflow_step} already completed successfully (4_fastqc_multiqc.tar.gz verified). Skipping step." | tee -a 0_workflow_progress.txt
 else
-    # A previous interrupted run may have left a partial directory or archive; wipe and redo.
+    # Remove a previous interrupted run
     if [ -d "4_fastqc_multiqc" ]; then
         echo "${workflow_step}: Found incomplete 4_fastqc_multiqc directory from a previous interrupted run. Removing it to start fresh." | tee -a 0_workflow_progress.txt
         rm -rf "4_fastqc_multiqc"
@@ -990,8 +981,7 @@ else
     # Deactivate Conda environment
     conda deactivate
 
-    # seqkit stats exits 0 even when an input gzip is truncated/corrupted (it only prints [ERRO]
-    # and stops writing rows), so check that there is exactly one row per input file
+    # Check that there is exactly one row per input file
     expected_rows=${#reads_files[@]}
     actual_rows=$(( $(wc -l < "${output_file}") - 1 ))
     if [ "${actual_rows}" -ne "${expected_rows}" ]; then
@@ -1050,7 +1040,6 @@ else
     sed -i 's/\r$//' ref_genomes_ids.tsv
 
     # Check whether every reference listed in ref_genomes_ids.tsv already has a valid final file
-    # (either the raw .fasta from this step, or the .fasta.gz produced later by 5.2)
     all_present=1
     while IFS=$'\t' read -r ref_accession ref_name others; do
         [ -z "$ref_accession" ] && continue
@@ -1067,8 +1056,7 @@ else
     if [ "$all_present" -eq 1 ]; then
         echo "${workflow_step} all reference genomes already present and valid. Skipping step." | tee -a 0_workflow_progress.txt
     else
-        # A previous interrupted run may have left partial genomes or leftover temp directories;
-        # this download is not reliably resumable per-accession, so wipe and redo entirely.
+        # Remove a previous interrupted run
         echo "${workflow_step}: Missing or incomplete reference genome(s) found. Removing partial files and redownloading everything." | tee -a 0_workflow_progress.txt
         rm -rf 5_ref_genomes genome_data.zip ncbi_dataset README.md md5sum.txt
         mkdir -p 5_ref_genomes
@@ -1097,8 +1085,7 @@ else
         # Delete temporary files and directory
         rm -rf genome_data.zip ncbi_dataset README.md md5sum.txt
 
-        # Compress reference genome files (always kept compressed at rest;
-        # bwa-mem2 index reads .fasta.gz directly, no decompression needed)
+        # Compress reference genome files
         echo "Compressing reference genomes files" | tee -a 0_workflow_progress.txt
         for file in 5_ref_genomes/*.fasta; do
             [ -f "$file" ] || continue
@@ -1258,10 +1245,7 @@ while IFS=$'\t' read -r sample ref_accession ref_name isolation_source others; d
     # Start counting the running time
     loop_start_time=$SECONDS
 
-    # Trimmed reads from fastp - required whether the sample is host-associated or not.
-    # Check they exist BEFORE touching bwa-mem2/samtools: a naming mismatch between the
-    # 'sample' column in metagenomes.tsv and the fastp output file names would otherwise
-    # only surface deep inside the bwa-mem2 | samtools pipe, as a confusing samtools error.
+    # Check fastp timmed reads
     r1_input_file="3_fastp/${sample}_trimmed_1.fq.gz"
     r2_input_file="3_fastp/${sample}_trimmed_2.fq.gz"
     if [ ! -f "$r1_input_file" ] || [ ! -f "$r2_input_file" ]; then
@@ -1299,11 +1283,7 @@ while IFS=$'\t' read -r sample ref_accession ref_name isolation_source others; d
         exit 1
     fi
 
-    # Skip sample if output files already exist and are valid, complete gzip files with
-    # sane FASTQ content (gzip -t alone only checks the compression container — a file can
-    # be a perfectly valid gzip stream while the FASTQ bytes inside are corrupted, e.g. a
-    # stray non-ASCII byte in a quality line. Check read-count consistency and quality-byte
-    # range too, so this class of corruption doesn't slip through to FastQC downstream.)
+    # Skip sample if output files already exist and are valid
     if [ -f "$r1_output_file" ] && [ -f "$r2_output_file" ] \
         && gzip -t "$r1_output_file" 2>/dev/null && gzip -t "$r2_output_file" 2>/dev/null; then
         r1_lines=$(zcat "$r1_output_file" | wc -l)
@@ -1333,11 +1313,7 @@ while IFS=$'\t' read -r sample ref_accession ref_name isolation_source others; d
             "5_bwa_reads/${r2_output_file##*/}.md5"
     fi
 
-    # Unique temp-file prefix for samtools sort, scoped to this sample. Without an
-    # explicit -T, samtools falls back to a PID-based default prefix in the current
-    # directory when writing to stdout — harmless in practice for a sequential loop like
-    # this one, but an explicit per-sample prefix removes any doubt and makes leftover
-    # temp files from an interrupted run easy to spot and clean up.
+    # Unique temp-file prefix for samtools sort, scoped to this sample.
     sort_tmp_prefix="5_bwa_reads/${sample}_sort_tmp"
 
     # Run main software (without intermediate files)
@@ -1359,15 +1335,10 @@ while IFS=$'\t' read -r sample ref_accession ref_name isolation_source others; d
         -@ $(nproc --ignore=1) \
         -
 
-    # Clean up any leftover samtools sort temp files (normally removed automatically,
-    # but a killed/interrupted run can leave them behind)
+    # Clean up any leftover samtools sort temp files
     rm -f "${sort_tmp_prefix}".*.bam
 
-    # Validate reads files; if corrupted, remove so the next run reprocesses this sample.
-    # Two layers: gzip container integrity, then FASTQ content sanity (read-count match
-    # between mates and quality bytes within the printable ASCII range) — gzip -t alone
-    # would miss a corrupted-but-well-formed-gzip file like the one that caused FastQC to
-    # hang on a stray non-ASCII quality byte.
+    # Validate reads files
     echo "Validating R1 file"
     if ! gzip -t "$r1_output_file" 2>> 5_bwa_reads_corrupted.txt; then
         echo "5) Bwa-mem2 R1 output failed gzip integrity check for sample: $sample" | tee -a 0_workflow_progress.txt
@@ -1444,8 +1415,7 @@ start_time=$SECONDS
 if [ -f "5_bwa_reads_fastqc.tar.gz" ] && [ -f "5_bwa_reads_fastqc.tar.gz.md5" ] && md5sum -c "5_bwa_reads_fastqc.tar.gz.md5" >/dev/null 2>&1; then
     echo "✔  ${workflow_step} already completed successfully (5_bwa_reads_fastqc.tar.gz verified). Skipping step." | tee -a 0_workflow_progress.txt
 else
-    # A previous interrupted run may have left a partial directory or archive; wipe and redo,
-    # since FastQC runs as a single call over all files and has no reliable per-file resume here.
+    # Wipe and redo if a previous interrupted run may have left a partial directory or archive
     if [ -d "5_bwa_reads_fastqc" ]; then
         echo "${workflow_step}: Found incomplete 5_bwa_reads_fastqc directory from a previous interrupted run. Removing it to start fresh." | tee -a 0_workflow_progress.txt
         rm -rf "5_bwa_reads_fastqc"
@@ -1600,8 +1570,7 @@ else
     # Deactivate Conda environment
     conda deactivate
 
-    # seqkit stats exits 0 even when an input gzip is truncated/corrupted (it only prints [ERRO]
-    # and stops writing rows), so check that there is exactly one row per input file
+    # Check that there is exactly one row per input file
     expected_rows=${#reads_files[@]}
     actual_rows=$(( $(wc -l < "${output_file}") - 1 ))
     if [ "${actual_rows}" -ne "${expected_rows}" ]; then
@@ -4704,9 +4673,7 @@ done
 # Deactivate Conda environment
 conda deactivate
 
-# Now that SemiBin concatenate_fasta has consumed the .fasta.gz files it needs, delete the
-# redundant plain .fasta copies in 10_seqkit/ (the .fasta.gz always stays — it's still needed
-# directly by Minimap2 index (10.3) for single-sample sources) and archive what remains.
+# Delete the redundant plain .fasta copies in 10_seqkit/ and archive what remains.
 shopt -s nullglob
 raw_seqkit_fastas=(10_seqkit/*.fasta)
 if [ ${#raw_seqkit_fastas[@]} -gt 0 ]; then
@@ -6323,8 +6290,7 @@ if [ "$sample_count" -eq 0 ]; then
     exit 1
 fi
 
-# Track whether this step actually (re)processed any bin, so the summary/compression
-# block below can be skipped entirely when nothing changed from a previous run
+# Track whether this step actually (re)processed any bin
 work_done=false
 
 # Activate Conda environment
@@ -6482,8 +6448,7 @@ if [ "$sample_count" -eq 0 ]; then
     exit 1
 fi
 
-# Track whether this step actually (re)processed any bin, so the compression/checksum
-# block below can be skipped entirely when nothing changed from a previous run
+# Track whether this step actually (re)processed any bin
 work_done=false
 
 # Activate Conda environment
@@ -6632,8 +6597,7 @@ if [ "$sample_count" -eq 0 ]; then
     exit 1
 fi
 
-# Track whether this step actually (re)processed any bin, so the compression/checksum
-# block below can be skipped entirely when nothing changed from a previous run
+# Track whether this step actually (re)processed any bin
 work_done=false
 
 # Activate Conda environment
@@ -6767,8 +6731,7 @@ if [ "$sample_count" -eq 0 ]; then
     exit 1
 fi
 
-# Track whether this step actually (re)processed any bin, so the compression/checksum
-# block below can be skipped entirely when nothing changed from a previous run
+# Track whether this step actually (re)processed any bin
 work_done=false
 
 # Activate Conda environment
@@ -6905,8 +6868,7 @@ if [ "$sample_count" -eq 0 ]; then
     exit 1
 fi
 
-# Track whether this step actually (re)processed any bin, so the compression/checksum
-# block below can be skipped entirely when nothing changed from a previous run
+# Track whether this step actually (re)processed any bin
 work_done=false
 
 # Activate Conda environment
@@ -6931,12 +6893,7 @@ for dir in "${sample_dirs[@]}"; do
         # Extract bin name
         binname=${filename%%.faa}
 
-        # Skip bin if output already exists and looks complete. diamond legitimately
-        # produces an empty $no_header_tsv when a bin has zero VF hits, so completeness
-        # is checked by existence (-f) here, not non-empty (-s); $header_tsv is only ever
-        # created by the awk step below (after diamond finishes, thanks to set -e), and
-        # always has at least the header line, so -s on it is a reliable "the step
-        # actually finished" marker.
+        # Skip bin if output already exists and looks complete
         bin_dir="13_pyrodigal_vfdb/${sample}_vfdb/${binname}_vfdb"
         header_tsv="${bin_dir}/${binname}_vfdb.tsv"
         no_header_tsv="${bin_dir}/${binname}_vfdb_no_header.tsv"
@@ -6992,10 +6949,7 @@ done
 # Deactivate Conda environment
 conda deactivate
 
-# Build a single combined table with all bins from all samples (one header line only), so
-# downstream steps have one file to read instead of looping over every per-bin *_vfdb.tsv.
-# Rebuilt whenever any bin was (re)processed, and also on a fresh run where every bin was
-# already complete but the combined file itself is still missing/empty.
+# Build a single combined table with all bins from all samples
 combined_file="13_pyrodigal_vfdb/vfdb_all.tsv"
 if [ "$work_done" = true ] || [ ! -s "$combined_file" ]; then
     echo "${workflow_step}: Building combined table ${combined_file}" | tee -a 0_workflow_progress.txt

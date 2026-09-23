@@ -4765,6 +4765,7 @@ while IFS=$'\t' read -r source sample_list; do
         # Inform source and execute the command line
         echo "▶  ${workflow_step} — ${source} (${num_samples} samples) @ $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
 
+        # k=21, w=11 match the indexing values of the "sr" preset for the alignment of short reads 
         minimap2 \
             -k21 -w11 \
             -d "10_seqkit_concat_minimap_index/${source}/${source}.mmi" \

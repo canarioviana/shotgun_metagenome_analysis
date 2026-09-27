@@ -6380,7 +6380,7 @@ done
 conda deactivate
 
 compressed_file="13_pyrodigal.tar.gz"
-itens_to_compress=(13_pyrodigal)
+itens_to_compress=(13_pyrodigal 13_pyrodigal.tsv)
 
 # Skip regenerating the gene-count summary and re-compressing if nothing changed and
 # a valid archive from a previous run already exists
@@ -6399,6 +6399,9 @@ else
         gene_count=$(grep -c ">" "$filepath")
         echo -e "${sample}\t${filename}\t${gene_count}" >> 13_pyrodigal/pyrodigal_all.tsv
     done
+
+    # Copy gene count table to main directory
+    cp 13_pyrodigal/pyrodigal_all.tsv 13_pyrodigal.tsv
 
     # Compress the output directory
     echo "${workflow_step}: Compressing output directory" | tee -a 0_workflow_progress.txt

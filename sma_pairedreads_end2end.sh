@@ -5915,12 +5915,14 @@ else
         for f in "${files[@]}"; do
             tail -n +2 "$f" >> 12_quast/quast_all.tsv
         done
+        # Copy the concatenated results file to the main directory
+        cp 12_quast/quast_all.tsv 12_quast.tsv
     else
         echo "⚠️  ${workflow_step}: No 12_quast/*_quast.tsv files found. quast_all.tsv was not created." | tee -a 0_workflow_progress.txt
     fi
     # Compress the output directory
     compressed_file="12_quast.tar.gz"
-    itens_to_compress=(12_quast)
+    itens_to_compress=(12_quast 12_quast.tsv)
     echo "${workflow_step}: Compressing output directory" | tee -a 0_workflow_progress.txt
     if ! tar -c --use-compress-program=pigz -f "${compressed_file}" "${itens_to_compress[@]}"; then
         echo "✗  ERROR: ${compressed_file}: FAILED to create archive" | tee -a 0_workflow_progress.txt

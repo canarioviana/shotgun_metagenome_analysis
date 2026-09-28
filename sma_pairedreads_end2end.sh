@@ -5683,7 +5683,7 @@ else
             # Check if the current bin passed the CheckM2 quality filter (matching with or without .gz extension)
             if grep -qxF "$bin_filename" "$passed_bins_list" || grep -qxF "$bin_basename_raw" "$passed_bins_list"; then
                 binname=$(basename "$bin" .fasta.gz)
-                genome_id="${sample}_${binname}"
+                genome_id="${binname}"
                 printf '%s\t%s\n' "$(readlink -f "$bin")" "$genome_id" >> "$batchfile"
                 printf '%s\t%s\n' "$genome_id" "$sample" >> "$mapfile_tsv"
             fi

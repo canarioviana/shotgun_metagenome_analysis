@@ -6332,8 +6332,9 @@ for dir in "${sample_dirs[@]}"; do
         if [ -s "${bin_dir}/${binname}.fsa" ] && \
            [ -s "${bin_dir}/${binname}.ffn" ] && \
            [ -s "${bin_dir}/${binname}.faa" ] && \
-           [ -s "${bin_dir}/${binname}.gff" ]; then
-           echo "${workflow_step} output files (.fsa, .ffn, .faa, .gff) already exist and are valid for sample $sample -> bin $binname. Skipping bin." | tee -a 0_workflow_progress.txt
+           [ -s "${bin_dir}/${binname}.gff" ] && \
+           [ -s "${bin_dir}/${binname}.gbk" ]; then
+           echo "${workflow_step} output files (.fsa, .ffn, .faa, .gff, .gbk) already exist and are valid for sample $sample -> bin $binname. Skipping bin." | tee -a 0_workflow_progress.txt
            continue
         elif [ -d "$bin_dir" ]; then
            echo "${workflow_step} found incomplete output for sample $sample -> bin $binname. Removing partial directory and reprocessing." | tee -a 0_workflow_progress.txt
@@ -6349,18 +6350,36 @@ for dir in "${sample_dirs[@]}"; do
         # Extract input file
         zcat "${file}" > "13_pyrodigal/${sample}_pyrodigal/${binname}/${binname}.fsa"
 
-        # Run Pyrodigal
+        # Run Pyrodigal with gff output (plus nucleotide and protein fasta)
         pyrodigal \
             -j $(nproc --ignore=1) \
             -m \
             -p single \
             --no-stop-codon \
             -f gff \
-            -i "13_pyrodigal/${sample}_pyrodigal/${binname}/${binname}.fsa" \
-            -d "13_pyrodigal/${sample}_pyrodigal/${binname}/${binname}.ffn" \
-            -a "13_pyrodigal/${sample}_pyrodigal/${binname}/${binname}.faa" \
-            -o "13_pyrodigal/${sample}_pyrodigal/${binname}/${binname}.gff"
+            -i "${bin_dir}/${binname}.fsa" \
+            -d "${bin_dir}/${binname}.ffn" \
+            -a "${bin_dir}/${binname}.faa" \
+            -o "${bin_dir}/${binname}.gff"
 
+        # Run Pyrodigal with gbk output (same parameters -> identical gene predictions and IDs)
+        pyrodigal \
+            -j $(nproc --ignore=1) \
+            -m \
+            -p single \
+            --no-stop-codon \
+            -f gbk \
+            -i "${bin_dir}/${binname}.fsa" \
+            -o "${bin_dir}/${binname}.gbk"
+
+        # Rewrite LOCUS lines to strict GenBank layout (4-digit year, fixed columns)
+        # to avoid BiopythonParserWarning in downstream tools (e.g. antiSMASH)
+        awk '/^LOCUS/{
+                split($8, d, "-"); if (length(d[3]) == 2) d[3] = "20" d[3]
+                printf "LOCUS       %-16s %11s bp    %-6s  %-8s %s %s-%s-%s\n", $2, $3, $5, $6, $7, d[1], d[2], d[3]
+                next }
+             { print }' "${bin_dir}/${binname}.gbk" > "${bin_dir}/${binname}.gbk.tmp" \
+          && mv "${bin_dir}/${binname}.gbk.tmp" "${bin_dir}/${binname}.gbk"
     done
 
     # Stop counting the running time

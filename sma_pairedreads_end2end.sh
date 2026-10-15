@@ -4,7 +4,7 @@
 # Script for metagenomic analysis of the gut microbiome from non-human primates
 # This script is under development
 # Author: Marcus V. C. Viana
-# Date: 30/09/2026
+# Date: 14/10/2026
 
 
 ############################################################
@@ -7211,8 +7211,25 @@ done
 # Deactivate Conda environment
 conda deactivate
 
+# Merge mobtyper_results_all.tsv files from all samples
+# Output file in the working directory
+merged_file="14_mobsuite_mobtyper_results.tsv"
+# List of per-sample merged MOB-typer results
+mobtyper_files=(14_mobsuite/*_mobsuite/mobtyper_results_all.tsv)
+# Check if any input file exists
+if [ "${#mobtyper_files[@]}" -eq 0 ]; then
+    echo "⚠  ${workflow_step}: No files found matching 14_mobsuite/*_mobsuite/mobtyper_results_all.tsv. Skipping merge." | tee -a 0_workflow_progress.txt
+else
+    # Concatenate all files, keeping only the header of the first non-empty file
+    awk 'FNR==1 && seen++ {next} 1' "${mobtyper_files[@]}" > "$merged_file"
+    # Report the number of merged files and records
+    echo "${workflow_step}: ${#mobtyper_files[@]} files merged into ${merged_file} ($(($(wc -l < "$merged_file") - 1)) records)" | tee -a 0_workflow_progress.txt
+fi
+
 compressed_file="14_mobsuite.tar.gz"
 itens_to_compress=(14_mobsuite)
+# Include the merged MOB-typer table in the archive if it was created
+[ -f "$merged_file" ] && itens_to_compress+=("$merged_file")
 
 # Skip recompressing/re-verifying if nothing changed and a valid archive from a previous run already exists
 if [ "$work_done" = false ] && [ -f "$compressed_file" ] && [ -f "${compressed_file}.md5" ] \

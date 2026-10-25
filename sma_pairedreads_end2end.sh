@@ -4,7 +4,7 @@
 # Script for metagenomic analysis of the gut microbiome from non-human primates
 # This script is under development
 # Author: Marcus V. C. Viana
-# Date: 14/10/2026
+# Date: 25/10/2026
 
 
 ############################################################
@@ -226,7 +226,7 @@ while IFS=$'\t' read -r sample ref_accession ref_name isolation_source others; d
             missing_hosts=$((missing_hosts + 1))
         fi
     fi
-done < metagenomes.tsv
+done < <(tr -d '\r' < metagenomes.tsv | awk '1')
 
 if [ "$missing_hosts" -gt 0 ]; then
     echo "✗  ERROR: Found $missing_hosts host inconsistency(ies). Please fix the metadata table before proceeding." | tee -a 0_workflow_progress.txt
@@ -432,7 +432,7 @@ while IFS=$'\t' read -r sample ref_accession ref_name isolation_source others; d
         echo "✗  ERROR: Sample '${sample}' listed in metagenomes.tsv has no matching read files (expected 1_reads/${sample}_1.fq.gz and 1_reads/${sample}_2.fq.gz)." | tee -a 0_workflow_progress.txt
         missing_reads=$((missing_reads + 1))
     fi
-done < metagenomes.tsv
+done < <(tr -d '\r' < metagenomes.tsv | awk '1')
 
 if [ "$missing_reads" -gt 0 ]; then
     echo "✗  ERROR: Found $missing_reads sample(s) in metagenomes.tsv without matching read files in 1_reads/. Please fix the sample names in metagenomes.tsv or the read file names before proceeding." | tee -a 0_workflow_progress.txt
@@ -1051,24 +1051,24 @@ else
             all_present=0
             break
         fi
-    done < ref_genomes_ids.tsv
+    done < <(tr -d '\r' < ref_genomes_ids.tsv | awk '1')
 
     if [ "$all_present" -eq 1 ]; then
         echo "${workflow_step} all reference genomes already present and valid. Skipping step." | tee -a 0_workflow_progress.txt
     else
         # Remove a previous interrupted run
-        echo "${workflow_step}: Missing or incomplete reference genome(s) found. Removing partial files and redownloading everything." | tee -a 0_workflow_progress.txt
+        echo "${workflow_step}: Reference genome(s) not found or incomplete. Downloading all reference genomes." | tee -a 0_workflow_progress.txt
         rm -rf 5_ref_genomes genome_data.zip ncbi_dataset README.md md5sum.txt
         mkdir -p 5_ref_genomes
 
         # Activate Conda environment
         conda activate datasets
-        # Download compressed dehydrated directory
+        # Download compressed dehydrated directory. Pass accessions (first column) directly as arguments
         datasets download genome accession \
+            $(cut -f1 ref_genomes_ids.tsv) \
             --assembly-version latest \
             --include genome \
             --dehydrated \
-            --inputfile ref_genomes_ids.tsv \
             --filename genome_data.zip
         # Unzip genome_data.tar.gz
         unzip genome_data.zip
@@ -1183,11 +1183,17 @@ else
             # Show the running time
             echo "✔  $workflow_step - $ref_name @ $(date +'%Y-%m-%d %H:%M:%S') - Total: ${loop_running_time} " | tee -a 0_workflow_progress.txt
 
-        done < ref_genomes_ids.tsv
+        done < <(tr -d '\r' < ref_genomes_ids.tsv | awk '1')
 
         # Deactivate Conda environment
         conda deactivate
 
+        # Abort if no index file was produced (e.g. metadata loop did not run)
+        if [ -z "$(find 5_bwa_index -type f 2>/dev/null)" ]; then
+            echo "✗  ERROR: ${workflow_step}: no index files were created in 5_bwa_index/. Check ref_genomes_ids.tsv." | tee -a 0_workflow_progress.txt
+            rm -f 5_bwa_index.md5
+            exit 1
+        fi
         # Generate a checksum file for the indexes
         find 5_bwa_index -type f -exec md5sum {} + > 5_bwa_index.md5
         # Check file integrity

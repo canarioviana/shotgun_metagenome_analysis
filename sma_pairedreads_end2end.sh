@@ -1326,6 +1326,8 @@ while IFS=$'\t' read -r sample ref_accession ref_name isolation_source others; d
 
     # Unique temp-file prefix for samtools sort, scoped to this sample.
     sort_tmp_prefix="5_bwa_reads/${sample}_sort_tmp"
+    # Remove leftover samtools sort temp files from a previous interrupted run
+    rm -f "${sort_tmp_prefix}".*.ba
 
     # Run main software (without intermediate files)
     bwa-mem2 mem \
@@ -4947,6 +4949,11 @@ while IFS=$'\t' read -r sample ref_accession ref_name isolation_source others; d
     # Start counting the running time
     loop_start_time=$SECONDS
 
+    # Temp-file prefix for samtools sort, scoped to this sample
+    sort_tmp_prefix="10_seqkit_concat_minimap_mapping/${sample}_sort_tmp"
+    # Remove leftover samtools sort temp files from a previous interrupted run
+    rm -f "${sort_tmp_prefix}".*.bam
+
     # Map the reads to contigs and generate bam file (no intermediate files)
     minimap2 \
         -t $(nproc --ignore=1) \
@@ -4958,8 +4965,11 @@ while IFS=$'\t' read -r sample ref_accession ref_name isolation_source others; d
         | tee >(samtools flagstat - > "10_seqkit_concat_minimap_mapping/${sample}_allreads_flagstat.txt") \
         | samtools view -b -h -F 4 -@ 8 - \
         | tee >(samtools flagstat - > "10_seqkit_concat_minimap_mapping/${sample}_mappedreads_flagstat.txt") \
-        | samtools sort -@ 8 \
+        | samtools sort -T "$sort_tmp_prefix" -m 3G -@ 8 \
             -o "$output_file"
+
+    # Clean up any leftover samtools sort temp files
+    rm -f "${sort_tmp_prefix}".*.bam
 
     # Validate the resulting BAM file; if corrupted, remove so the next run reprocesses this sample
     if ! samtools quickcheck "$output_file" 2>>10_seqkit_concat_minimap_mapping_corrupted.txt; then

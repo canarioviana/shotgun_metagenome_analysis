@@ -4,7 +4,7 @@
 # Script for metagenomic analysis of the gut microbiome from non-human primates
 # This script is under development
 # Author: Marcus V. C. Viana
-# Date: 25/10/2026
+# Date: 27/10/2026
 
 
 ############################################################
@@ -158,6 +158,11 @@ fi
 ############################################################
 ##  Mark the start of a full pipeline run (fresh start or restart)
 
+# Add a blank line before the header only when the log already exists and does not end with one
+if [ -s 0_workflow_progress.txt ] && [ -n "$(tail -n 1 0_workflow_progress.txt)" ]; then
+    echo "" >> 0_workflow_progress.txt
+fi
+
 echo -e "════════════════════════════════════════════════════════
 WORKFLOW STARTED @ $(date +'%Y-%m-%d %H:%M:%S')
 ════════════════════════════════════════════════════════\n" | tee -a 0_workflow_progress.txt
@@ -280,9 +285,9 @@ if [ -f reads_accessions.tsv ]; then
         paired_ok=0
         single_ok=0
         if [ -f "1_reads/${sample}_1.fq.gz" ] && [ -f "1_reads/${sample}_2.fq.gz" ] \
-            && gzip -t "1_reads/${sample}_1.fq.gz" 2>/dev/null && gzip -t "1_reads/${sample}_2.fq.gz" 2>/dev/null; then
+            && pigz -t "1_reads/${sample}_1.fq.gz" 2>/dev/null && pigz -t "1_reads/${sample}_2.fq.gz" 2>/dev/null; then
             paired_ok=1
-        elif [ -f "1_reads/${sample}.fq.gz" ] && gzip -t "1_reads/${sample}.fq.gz" 2>/dev/null; then
+        elif [ -f "1_reads/${sample}.fq.gz" ] && pigz -t "1_reads/${sample}.fq.gz" 2>/dev/null; then
             single_ok=1
         fi
 
@@ -321,14 +326,14 @@ if [ -f reads_accessions.tsv ]; then
 
                 # Check if the reads are paired-end
                 if [ -f "${accession}_1.fastq.gz" ] && [ -f "${accession}_2.fastq.gz" ] \
-                    && gzip -t "${accession}_1.fastq.gz" 2>/dev/null && gzip -t "${accession}_2.fastq.gz" 2>/dev/null; then
+                    && pigz -t "${accession}_1.fastq.gz" 2>/dev/null && pigz -t "${accession}_2.fastq.gz" 2>/dev/null; then
                     echo "Sample ${sample} has paired-end reads."
                     echo "Renaming files."
                     mv "${accession}_1.fastq.gz" "${sample}_1.fq.gz"
                     mv "${accession}_2.fastq.gz" "${sample}_2.fq.gz"
 
                 # Check if the reads are single-end
-                elif [ -f "${accession}.fastq.gz" ] && gzip -t "${accession}.fastq.gz" 2>/dev/null; then
+                elif [ -f "${accession}.fastq.gz" ] && pigz -t "${accession}.fastq.gz" 2>/dev/null; then
                     echo "Sample ${sample} has single-end reads."
                     echo "Renaming file."
                     mv "${accession}.fastq.gz" "${sample}.fq.gz"
@@ -632,7 +637,7 @@ else
     expected_rows=${#reads_files[@]}
     actual_rows=$(( $(wc -l < "${output_file}") - 1 ))
     if [ "${actual_rows}" -ne "${expected_rows}" ]; then
-        echo "✗  ERROR: ${output_file}: expected ${expected_rows} rows but got ${actual_rows} (check the [ERRO] message above; test the files with 'gzip -t')" | tee -a 0_workflow_progress.txt
+        echo "✗  ERROR: ${output_file}: expected ${expected_rows} rows but got ${actual_rows} (check the [ERRO] message above; test the files with 'pigz -t')" | tee -a 0_workflow_progress.txt
         rm -f "${output_file}"
         exit 1
     fi
@@ -706,7 +711,7 @@ for r1 in "${r1_files[@]}"; do
     # Skip sample if trimmed output already exists and is valid
     out1="3_fastp/${sample}_trimmed_1.fq.gz"
     out2="3_fastp/${sample}_trimmed_2.fq.gz"
-    if [ -f "$out1" ] && [ -f "$out2" ] && gzip -t "$out1" 2>/dev/null && gzip -t "$out2" 2>/dev/null; then
+    if [ -f "$out1" ] && [ -f "$out2" ] && pigz -t "$out1" 2>/dev/null && pigz -t "$out2" 2>/dev/null; then
         echo "${workflow_step} output files already exist and are valid for sample: $sample. Skipping sample."
         i=$((i + 1))
         continue
@@ -985,7 +990,7 @@ else
     expected_rows=${#reads_files[@]}
     actual_rows=$(( $(wc -l < "${output_file}") - 1 ))
     if [ "${actual_rows}" -ne "${expected_rows}" ]; then
-        echo "✗  ERROR: ${output_file}: expected ${expected_rows} rows but got ${actual_rows} (check the [ERRO] message above; test the files with 'gzip -t')" | tee -a 0_workflow_progress.txt
+        echo "✗  ERROR: ${output_file}: expected ${expected_rows} rows but got ${actual_rows} (check the [ERRO] message above; test the files with 'pigz -t')" | tee -a 0_workflow_progress.txt
         rm -f "${output_file}"
         exit 1
     fi
@@ -1045,7 +1050,7 @@ else
         [ -z "$ref_accession" ] && continue
         if [ -f "5_ref_genomes/${ref_accession}.fasta" ] && [ -s "5_ref_genomes/${ref_accession}.fasta" ]; then
             continue
-        elif [ -f "5_ref_genomes/${ref_accession}.fasta.gz" ] && gzip -t "5_ref_genomes/${ref_accession}.fasta.gz" 2>/dev/null; then
+        elif [ -f "5_ref_genomes/${ref_accession}.fasta.gz" ] && pigz -t "5_ref_genomes/${ref_accession}.fasta.gz" 2>/dev/null; then
             continue
         else
             all_present=0
@@ -1291,7 +1296,7 @@ while IFS=$'\t' read -r sample ref_accession ref_name isolation_source others; d
 
     # Skip sample if output files already exist and are valid
     if [ -f "$r1_output_file" ] && [ -f "$r2_output_file" ] \
-        && gzip -t "$r1_output_file" 2>/dev/null && gzip -t "$r2_output_file" 2>/dev/null; then
+        && pigz -t "$r1_output_file" 2>/dev/null && pigz -t "$r2_output_file" 2>/dev/null; then
         r1_lines=$(zcat "$r1_output_file" | wc -l)
         r2_lines=$(zcat "$r2_output_file" | wc -l)
         if [ "$r1_lines" -gt 0 ] && [ $((r1_lines % 4)) -eq 0 ] && [ "$r1_lines" -eq "$r2_lines" ] \
@@ -1346,12 +1351,12 @@ while IFS=$'\t' read -r sample ref_accession ref_name isolation_source others; d
 
     # Validate reads files
     echo "Validating R1 file"
-    if ! gzip -t "$r1_output_file" 2>> 5_bwa_reads_corrupted.txt; then
+    if ! pigz -t "$r1_output_file" 2>> 5_bwa_reads_corrupted.txt; then
         echo "5) Bwa-mem2 R1 output failed gzip integrity check for sample: $sample" | tee -a 0_workflow_progress.txt
         rm -f "$r1_output_file" "$r2_output_file"
     fi
     echo "Validating R2 file"
-    if [ -f "$r2_output_file" ] && ! gzip -t "$r2_output_file" 2>> 5_bwa_reads_corrupted.txt; then
+    if [ -f "$r2_output_file" ] && ! pigz -t "$r2_output_file" 2>> 5_bwa_reads_corrupted.txt; then
         echo "5) Bwa-mem2 R2 output failed gzip integrity check for sample: $sample" | tee -a 0_workflow_progress.txt
         rm -f "$r1_output_file" "$r2_output_file"
     fi
@@ -1580,7 +1585,7 @@ else
     expected_rows=${#reads_files[@]}
     actual_rows=$(( $(wc -l < "${output_file}") - 1 ))
     if [ "${actual_rows}" -ne "${expected_rows}" ]; then
-        echo "✗  ERROR: ${output_file}: expected ${expected_rows} rows but got ${actual_rows} (check the [ERRO] message above; test the files with 'gzip -t')" | tee -a 0_workflow_progress.txt
+        echo "✗  ERROR: ${output_file}: expected ${expected_rows} rows but got ${actual_rows} (check the [ERRO] message above; test the files with 'pigz -t')" | tee -a 0_workflow_progress.txt
         rm -f "${output_file}"
         exit 1
     fi
@@ -1654,7 +1659,7 @@ for r1 in "${r1_files[@]}"; do
     # Skip sample if output file already exists and is a valid, complete gzip file
     output_file="6_kraken_report/${sample}_kreport.tsv"
     gz_file="6_kraken_output/${sample}.kraken.gz"
-    if [ -f "$output_file" ] && [ -f "$gz_file" ] && gzip -t "$gz_file" 2>/dev/null; then
+    if [ -f "$output_file" ] && [ -f "$gz_file" ] && pigz -t "$gz_file" 2>/dev/null; then
         echo "${workflow_step} output files already exist and are valid for sample: $sample. Skipping sample."
         i=$((i + 1))
         continue
@@ -1796,7 +1801,7 @@ for file in "${reports[@]}"; do
     output_file="6_bracken_report/${sample}_breport.tsv"
     gz_file="6_bracken_report/${sample}.bracken.gz"
     bracken_tmp="6_bracken_report/${sample}.bracken"
-    if [ -f "$output_file" ] && [ -f "$bracken_tmp" ] && [ -f "$gz_file" ] && gzip -t "$gz_file" 2>/dev/null; then
+    if [ -f "$output_file" ] && [ -f "$bracken_tmp" ] && [ -f "$gz_file" ] && pigz -t "$gz_file" 2>/dev/null; then
 
         echo "${workflow_step} output files already exist and are complete for sample: $sample. Skipping sample."
         i=$((i + 1))
@@ -2302,7 +2307,7 @@ for r1 in "${r1_files[@]}"; do
     output_file="7_megahit/${sample}_megahit.fasta"
     output_gz="${output_file}.gz"
     log_file="7_megahit/${sample}_megahit.log"
-    if [ -f "$output_gz" ] && gzip -t "$output_gz" 2>/dev/null && [ -f "$log_file" ]; then
+    if [ -f "$output_gz" ] && pigz -t "$output_gz" 2>/dev/null && [ -f "$log_file" ]; then
         echo "7) MEGAHIT output file already exists and is valid for sample: $sample ($output_gz). Skipping assembly."
         i=$((i + 1))
         continue
@@ -4526,7 +4531,7 @@ for file in "${fasta_files[@]}"; do
     # Skip sample if output already exists and is a valid, complete gzip file
     output_fasta="10_seqkit/${sample}_megahit_filtered.fasta"
     output_gz="${output_fasta}.gz"
-    if [ -f "$output_gz" ] && gzip -t "$output_gz" 2>/dev/null; then
+    if [ -f "$output_gz" ] && pigz -t "$output_gz" 2>/dev/null; then
         echo "${workflow_step} output file already exists and is valid for sample: $sample. Skipping sample."
         i=$((i + 1))
         continue
@@ -4565,7 +4570,7 @@ conda deactivate
 # Compress filtered assembly files (skip ones already compressed in a previous run)
 echo "Compressing files"
 for file in 10_seqkit/*.fasta; do
-    [ -f "${file}.gz" ] && gzip -t "${file}.gz" 2>/dev/null && continue
+    [ -f "${file}.gz" ] && pigz -t "${file}.gz" 2>/dev/null && continue
     pigz -k -p $(nproc --ignore=1) "${file}"
 done
 
@@ -4636,7 +4641,7 @@ while IFS=$'\t' read -r source sample_list; do
 
         # Skip group if output already exists and is a valid, complete gzip file
         output_gz="10_seqkit_concat/${source}_concat/concatenated.fa.gz"
-        if [ -f "$output_gz" ] && gzip -t "$output_gz" 2>/dev/null; then
+        if [ -f "$output_gz" ] && pigz -t "$output_gz" 2>/dev/null; then
             echo "${workflow_step}: output already exists and is valid for source ${source}. Skipping."
             continue
         elif [ -d "10_seqkit_concat/${source}_concat" ]; then

@@ -1630,7 +1630,26 @@ echo "▶▶▶  ${workflow_step} started @ $(date +'%Y-%m-%d %H:%M:%S') ▶▶�
 # Start counting the running time
 start_time=$SECONDS
 
-# Create an output directory
+# Kraken2 database (full PlusPF ~111 GB; use a capped DB on machines with less RAM)
+kraken_db="/db/kraken/k2_pluspf_20260626"
+
+# Split threads: leave one core free, give a few to pigz, the rest to kraken2
+pigz_threads=4
+kraken_threads=$(( $(nproc --ignore=1) - pigz_threads ))
+# Guard against machines with few cores
+if [ "$kraken_threads" -lt 1 ]; then
+    kraken_threads=1
+fi
+
+# Restore kraken reports from the archive if Bracken (6.2) already deleted the directory.
+# Without this, a rerun would treat every sample as incomplete and reclassify all of them.
+if [ ! -d "6_kraken_report" ] && [ -f "6_kraken_report.tar.gz" ] && [ -f "6_kraken_report.tar.gz.md5" ] \
+    && md5sum -c "6_kraken_report.tar.gz.md5" >/dev/null 2>&1; then
+    echo "${workflow_step}: Restoring 6_kraken_report from 6_kraken_report.tar.gz" | tee -a 0_workflow_progress.txt
+    tar -xzf "6_kraken_report.tar.gz"
+fi
+
+# Create output directories
 mkdir -p 6_kraken_report
 mkdir -p 6_kraken_output
 
@@ -1639,7 +1658,20 @@ i=1
 r1_files=(5_bwa_reads/*_1.fq.gz)
 sample_count=${#r1_files[@]}
 if [ "$sample_count" -eq 0 ]; then
-    echo "✗  ${workflow_step}: No input found matching 5_bwa_reads/*_1.fq.gz. Check that the previous step completed successfully." | tee -a 0_workflow_progress.txt
+    echo "✗ ERROR — ${workflow_step}: No input found matching 5_bwa_reads/*_1.fq.gz. Check that the previous step completed successfully." | tee -a 0_workflow_progress.txt
+    exit 1
+fi
+
+# Fail fast if the database is missing
+if [ ! -s "${kraken_db}/hash.k2d" ]; then
+    echo "✗ ERROR — ${workflow_step}: ${kraken_db}/hash.k2d not found." | tee -a 0_workflow_progress.txt
+    exit 1
+fi
+# Fail fast if the hash table does not fit in RAM (otherwise kraken2 thrashes re-reading it from disk for days)
+db_bytes=$(stat -c %s "${kraken_db}/hash.k2d")
+mem_bytes=$(awk '/MemTotal/ {print $2 * 1024}' /proc/meminfo)
+if [ "$db_bytes" -gt $((mem_bytes * 85 / 100)) ]; then
+    echo "✗ ERROR — ${workflow_step}: hash.k2d ($((db_bytes / 1024**3)) GB) does not fit in RAM ($((mem_bytes / 1024**3)) GB). Use a capped database or a machine with more RAM." | tee -a 0_workflow_progress.txt
     exit 1
 fi
 
@@ -1658,16 +1690,17 @@ for r1 in "${r1_files[@]}"; do
     # Extract sample name
     sample=${filename%_trimmed_nohost_1.fq.gz}
 
-    # Skip sample if output file already exists and is a valid, complete gzip file
+    # The report is only renamed from .tmp after the whole pipeline succeeds,
+    # so its existence means the sample really finished
     output_file="6_kraken_report/${sample}_kreport.tsv"
     gz_file="6_kraken_output/${sample}.kraken.gz"
     if [ -f "$output_file" ] && [ -f "$gz_file" ] && gzip -t "$gz_file" 2>/dev/null; then
         echo "${workflow_step} output files already exist and are valid for sample: $sample. Skipping sample."
         i=$((i + 1))
         continue
-    elif [ -f "$output_file" ] || [ -f "$gz_file" ]; then
+    elif [ -f "$output_file" ] || [ -f "$gz_file" ] || [ -f "${output_file}.tmp" ]; then
         echo "${workflow_step} found incomplete/corrupted output for sample: $sample. Removing partial files and reprocessing."
-        rm -f "$output_file" "$gz_file"
+        rm -f "$output_file" "$gz_file" "${output_file}.tmp" "${gz_file}.md5"
     fi
 
     # A sample will actually be (re)processed
@@ -1680,25 +1713,28 @@ for r1 in "${r1_files[@]}"; do
 
     # Run main software
     kraken2 \
-        --threads $(nproc --ignore=1) \
-        --db /db/kraken/k2_pluspf_20260626 \
+        --threads "$kraken_threads" \
+        --db "$kraken_db" \
         --memory-mapping \
         --paired "${r1}" "${r2}" \
-        --report "6_kraken_report/${sample}_kreport.tsv" \
+        --report "${output_file}.tmp" \
         --report-minimizer-data \
         --minimum-hit-groups 3 \
         --report-zero-counts \
-        | pigz -p $(nproc --ignore=1) -c > "6_kraken_output/${sample}.kraken.gz"
+        | pigz -p "$pigz_threads" -c > "$gz_file"
+
+    # Only mark the sample as complete after the whole pipeline succeeded
+    mv "${output_file}.tmp" "$output_file"
 
     # Stop counting the running time
-    loop_elapsed_time=$((SECONDS - $loop_start_time))
+    loop_elapsed_time=$((SECONDS - loop_start_time))
     # Calculate the running time
     loop_hours=$((loop_elapsed_time / 3600))
     loop_minutes=$(((loop_elapsed_time % 3600) / 60))
     loop_seconds=$((loop_elapsed_time % 60))
     loop_running_time=$(printf "%02d:%02d:%02d" "$loop_hours" "$loop_minutes" "$loop_seconds")
     # Show the running time
-    echo "✔  ${workflow_step} — ${sample} (${i}/${sample_count}) @ $(date +'%Y-%m-%d %H:%M:%S') — Total: ${loop_running_time} " | tee -a 0_workflow_progress.txt
+    echo "✔  ${workflow_step} — ${sample} (${i}/${sample_count}) @ $(date +'%Y-%m-%d %H:%M:%S') — Total: ${loop_running_time}" | tee -a 0_workflow_progress.txt
 
     i=$((i + 1))
 
@@ -1719,38 +1755,41 @@ else
     (cd 6_kraken_output && for file in *.gz; do
         [ -f "${file}.md5" ] && md5sum -c "${file}.md5" >/dev/null 2>&1 && continue
         echo "Processing checksum of file: ${file}"
-        md5sum ${file} > ${file}.md5
+        md5sum "${file}" > "${file}.md5"
     done) | tee -a 0_workflow_progress.txt
     # Check file integrity
     echo "${workflow_step}: Checking file integrity" | tee -a 0_workflow_progress.txt
-    (cd 6_kraken_output && md5sum -c *.md5) | tee -a 0_workflow_progress.txt
+    if ! (cd 6_kraken_output && md5sum -c *.md5) | tee -a 0_workflow_progress.txt; then
+        echo "✗ ERROR — ${workflow_step}: checksum verification failed in 6_kraken_output" | tee -a 0_workflow_progress.txt
+        exit 1
+    fi
 
     # Compress the output directory
     echo "${workflow_step}: Compressing output directory" | tee -a 0_workflow_progress.txt
     if ! tar -c --use-compress-program=pigz -f "${compressed_file}" "${itens_to_compress[@]}"; then
-        echo "✗  ERROR: ${compressed_file}: FAILED to create archive" | tee -a 0_workflow_progress.txt
+        echo "✗ ERROR — ${workflow_step}: ${compressed_file}: FAILED to create archive" | tee -a 0_workflow_progress.txt
         exit 1
     fi
     # Generate checksum file of compressed directory file
-    md5sum "${compressed_file}" > "${compressed_file}".md5
+    md5sum "${compressed_file}" > "${compressed_file}.md5"
     # Check file integrity (checksum)
     echo "${workflow_step}: Checking file integrity" | tee -a 0_workflow_progress.txt
-    if ! md5sum -c "${compressed_file}".md5 | tee -a 0_workflow_progress.txt; then
-        echo "✗  ERROR: ${compressed_file}: integrity check failed" | tee -a 0_workflow_progress.txt
+    if ! md5sum -c "${compressed_file}.md5" | tee -a 0_workflow_progress.txt; then
+        echo "✗ ERROR — ${workflow_step}: ${compressed_file}: integrity check failed" | tee -a 0_workflow_progress.txt
         exit 1
     fi
-
     # Check archive integrity (verifies the tar.gz is not corrupted / can be fully read)
     echo "${workflow_step}: Checking archive integrity" | tee -a 0_workflow_progress.txt
     if tar -tzf "${compressed_file}" > /dev/null; then
         echo "${compressed_file}: OK (valid tar.gz archive)" | tee -a 0_workflow_progress.txt
     else
-        echo "${compressed_file}: FAILED (corrupted tar.gz archive)" | tee -a 0_workflow_progress.txt
+        echo "✗ ERROR — ${workflow_step}: ${compressed_file}: corrupted tar.gz archive" | tee -a 0_workflow_progress.txt
+        exit 1
     fi
 fi
 
 # Stop counting the running time
-elapsed_time=$((SECONDS - $start_time))
+elapsed_time=$((SECONDS - start_time))
 # Calculate the running time
 hours=$((elapsed_time / 3600))
 minutes=$(((elapsed_time % 3600) / 60))
@@ -1772,23 +1811,47 @@ echo "▶▶▶  ${workflow_step} started @ $(date +'%Y-%m-%d %H:%M:%S') ▶▶�
 # Start counting the running time
 start_time=$SECONDS
 
-# Skip the whole step if it already completed successfully (final archive present and valid).
-# Necessary because the script deletes 6_kraken_report/ at the end, once Bracken is done with it.
-if [ -f "6_bracken_report.tar.gz" ] && [ -f "6_bracken_report.tar.gz.md5" ] && md5sum -c "6_bracken_report.tar.gz.md5" >/dev/null 2>&1; then
-    echo "✔  ${workflow_step} already completed successfully (6_bracken_report.tar.gz verified). Skipping step." | tee -a 0_workflow_progress.txt
-else
+# Kraken2 database: must be the SAME database used in step 6.1 (Bracken uses its k-mer distribution)
+kraken_db="/db/kraken/k2_pluspf_20260626"
+
+# Restore kraken reports if a previous run already deleted them (step 6.2 deletes them at the end)
+if [ ! -d "6_kraken_report" ] && [ -f "6_kraken_report.tar.gz" ] && [ -f "6_kraken_report.tar.gz.md5" ] \
+    && md5sum -c "6_kraken_report.tar.gz.md5" >/dev/null 2>&1; then
+    echo "${workflow_step}: Restoring 6_kraken_report from 6_kraken_report.tar.gz" | tee -a 0_workflow_progress.txt
+    tar -xzf "6_kraken_report.tar.gz"
+fi
+# Restore previous Bracken results so already finished samples are skipped
+# (replaces the old whole-step skip, which ignored samples added later)
+if [ ! -d "6_bracken_report" ] && [ -f "6_bracken_report.tar.gz" ] && [ -f "6_bracken_report.tar.gz.md5" ] \
+    && md5sum -c "6_bracken_report.tar.gz.md5" >/dev/null 2>&1; then
+    echo "${workflow_step}: Restoring 6_bracken_report from 6_bracken_report.tar.gz" | tee -a 0_workflow_progress.txt
+    tar -xzf "6_bracken_report.tar.gz"
+fi
 
 # Create an output directory
 mkdir -p 6_bracken_report
+
+# Remove legacy .bracken.gz copies from older versions of this step (redundant inside the tar.gz)
+rm -f 6_bracken_report/*.bracken.gz
 
 # Calculate sample size
 i=1
 reports=(6_kraken_report/*_kreport.tsv)
 sample_count=${#reports[@]}
 if [ "$sample_count" -eq 0 ]; then
-    echo "✗  ${workflow_step}: No input found matching 6_kraken_report/*_kreport.tsv. Check that the previous step completed successfully." | tee -a 0_workflow_progress.txt
+    echo "✗ ERROR — ${workflow_step}: No input found matching 6_kraken_report/*_kreport.tsv. Check that the previous step completed successfully." | tee -a 0_workflow_progress.txt
     exit 1
 fi
+
+# Fail fast if the k-mer distribution for this database and read length (-r 100) is missing
+kmer_distrib="${kraken_db}/database100mers.kmer_distrib"
+if [ ! -s "$kmer_distrib" ]; then
+    echo "✗ ERROR — ${workflow_step}: ${kmer_distrib} not found." | tee -a 0_workflow_progress.txt
+    exit 1
+fi
+
+# Track whether this step actually (re)processed any sample
+work_done=false
 
 # Activate Conda environment
 conda activate kraken2
@@ -1799,21 +1862,21 @@ for file in "${reports[@]}"; do
     # Extract sample name
     sample=${filename%_kreport.tsv}
 
-    # Skip sample if output file already exists and is a valid, complete gzip file
+    # Both outputs are only renamed from .tmp after Bracken succeeds,
+    # so their existence means the sample really finished
     output_file="6_bracken_report/${sample}_breport.tsv"
-    gz_file="6_bracken_report/${sample}.bracken.gz"
-    bracken_tmp="6_bracken_report/${sample}.bracken"
-    if [ -f "$output_file" ] && [ -f "$bracken_tmp" ] && [ -f "$gz_file" ] && gzip -t "$gz_file" 2>/dev/null; then
-
+    bracken_file="6_bracken_report/${sample}.bracken"
+    if [ -f "$output_file" ] && [ -f "$bracken_file" ]; then
         echo "${workflow_step} output files already exist and are complete for sample: $sample. Skipping sample."
         i=$((i + 1))
         continue
-
-    elif [ -f "$output_file" ] || [ -f "$bracken_tmp" ] || [ -f "$gz_file" ]; then
-
-        echo "${workflow_step} found incomplete/corrupted output for sample: $sample. Removing partial files and reprocessing."
-        rm -f "$output_file" "$bracken_tmp" "$gz_file"
+    elif [ -f "$output_file" ] || [ -f "$bracken_file" ] || [ -f "${output_file}.tmp" ] || [ -f "${bracken_file}.tmp" ]; then
+        echo "${workflow_step} found incomplete output for sample: $sample. Removing partial files and reprocessing."
+        rm -f "$output_file" "$bracken_file" "${output_file}.tmp" "${bracken_file}.tmp"
     fi
+
+    # A sample will actually be (re)processed
+    work_done=true
 
     # Inform current sample
     echo "▶  ${workflow_step} — ${sample} (${i}/${sample_count}) @ $(date +'%Y-%m-%d %H:%M:%S')" | tee -a 0_workflow_progress.txt
@@ -1822,26 +1885,27 @@ for file in "${reports[@]}"; do
 
     # Run main software
     bracken \
-        -d /db/kraken/k2_pluspf_20260626 \
-        -i "6_kraken_report/${sample}_kreport.tsv" \
-        -w "6_bracken_report/${sample}_breport.tsv" \
-        -o "6_bracken_report/${sample}.bracken" \
+        -d "$kraken_db" \
+        -i "$file" \
+        -w "${output_file}.tmp" \
+        -o "${bracken_file}.tmp" \
         -r 100 \
         -l S \
         -t 0
 
-    # Compress .bracken file
-    pigz -k -p $(nproc --ignore=1) "6_bracken_report/${sample}.bracken"
+    # Only mark the sample as complete after Bracken succeeded
+    mv "${output_file}.tmp" "$output_file"
+    mv "${bracken_file}.tmp" "$bracken_file"
 
     # Stop counting the running time
-    loop_elapsed_time=$((SECONDS - $loop_start_time))
+    loop_elapsed_time=$((SECONDS - loop_start_time))
     # Calculate the running time
     loop_hours=$((loop_elapsed_time / 3600))
     loop_minutes=$(((loop_elapsed_time % 3600) / 60))
     loop_seconds=$((loop_elapsed_time % 60))
     loop_running_time=$(printf "%02d:%02d:%02d" "$loop_hours" "$loop_minutes" "$loop_seconds")
     # Show the running time
-    echo "✔  ${workflow_step} — ${sample} (${i}/${sample_count}) @ $(date +'%Y-%m-%d %H:%M:%S') — Total: ${loop_running_time} " | tee -a 0_workflow_progress.txt
+    echo "✔  ${workflow_step} — ${sample} (${i}/${sample_count}) @ $(date +'%Y-%m-%d %H:%M:%S') — Total: ${loop_running_time}" | tee -a 0_workflow_progress.txt
 
     i=$((i + 1))
 
@@ -1849,32 +1913,51 @@ done
 # Deactivate Conda environment
 conda deactivate
 
-# Compress the output directory
 compressed_file="6_bracken_report.tar.gz"
 itens_to_compress=(6_bracken_report)
-echo "${workflow_step}: Compressing output directory" | tee -a 0_workflow_progress.txt
-if ! tar -c --use-compress-program=pigz -f "${compressed_file}" "${itens_to_compress[@]}"; then
-    echo "✗  ERROR: ${compressed_file}: FAILED to create archive" | tee -a 0_workflow_progress.txt
-    exit 1
-fi
-# Generate checksum file of compressed directory file
-md5sum "${compressed_file}" > "${compressed_file}".md5
-# Check file integrity
-echo "${workflow_step}: Checking file integrity" | tee -a 0_workflow_progress.txt
-if ! md5sum -c "${compressed_file}".md5 | tee -a 0_workflow_progress.txt; then
-    echo "✗  ERROR: ${compressed_file}: integrity check failed" | tee -a 0_workflow_progress.txt
-    exit 1
+
+# Skip recompressing/re-verifying if nothing changed and a valid archive already exists
+if [ "$work_done" = false ] && [ -f "$compressed_file" ] && [ -f "${compressed_file}.md5" ] \
+    && md5sum -c "${compressed_file}.md5" >/dev/null 2>&1; then
+    echo "✔  ${workflow_step} already completed successfully (${compressed_file} verified). Skipping compression." | tee -a 0_workflow_progress.txt
+else
+    # Compress the output directory
+    echo "${workflow_step}: Compressing output directory" | tee -a 0_workflow_progress.txt
+    if ! tar -c --use-compress-program=pigz -f "${compressed_file}" "${itens_to_compress[@]}"; then
+        echo "✗ ERROR — ${workflow_step}: ${compressed_file}: FAILED to create archive" | tee -a 0_workflow_progress.txt
+        exit 1
+    fi
+    # Generate checksum file of compressed directory file
+    md5sum "${compressed_file}" > "${compressed_file}.md5"
+    # Check file integrity (checksum)
+    echo "${workflow_step}: Checking file integrity" | tee -a 0_workflow_progress.txt
+    if ! md5sum -c "${compressed_file}.md5" | tee -a 0_workflow_progress.txt; then
+        echo "✗ ERROR — ${workflow_step}: ${compressed_file}: integrity check failed" | tee -a 0_workflow_progress.txt
+        exit 1
+    fi
+    # Check archive integrity (verifies the tar.gz is not corrupted / can be fully read)
+    echo "${workflow_step}: Checking archive integrity" | tee -a 0_workflow_progress.txt
+    if tar -tzf "${compressed_file}" > /dev/null; then
+        echo "${compressed_file}: OK (valid tar.gz archive)" | tee -a 0_workflow_progress.txt
+    else
+        echo "✗ ERROR — ${workflow_step}: ${compressed_file}: corrupted tar.gz archive" | tee -a 0_workflow_progress.txt
+        exit 1
+    fi
 fi
 
-# Delete the raw Kraken report directory now that Bracken is done reading from it
-# (nothing later in the pipeline reads 6_kraken_report/ again; 6_kraken_report.tar.gz keeps the data)
-echo "${workflow_step}: Deleting 6_kraken_report (kept as 6_kraken_report.tar.gz)" | tee -a 0_workflow_progress.txt
-rm -r 6_kraken_report
-
+# Delete the raw Kraken report directory now that Bracken is done reading from it,
+# but only if the archive from step 6.1 is present and valid (it is the only other copy)
+if [ -f "6_kraken_report.tar.gz" ] && [ -f "6_kraken_report.tar.gz.md5" ] \
+    && md5sum -c "6_kraken_report.tar.gz.md5" >/dev/null 2>&1 \
+    && tar -tzf "6_kraken_report.tar.gz" >/dev/null; then
+    echo "${workflow_step}: Deleting 6_kraken_report (kept as 6_kraken_report.tar.gz)" | tee -a 0_workflow_progress.txt
+    rm -r 6_kraken_report
+else
+    echo "⚠️ WARNING — ${workflow_step}: 6_kraken_report.tar.gz missing or invalid; keeping 6_kraken_report/" | tee -a 0_workflow_progress.txt
 fi
 
 # Stop counting the running time
-elapsed_time=$((SECONDS - $start_time))
+elapsed_time=$((SECONDS - start_time))
 # Calculate the running time
 hours=$((elapsed_time / 3600))
 minutes=$(((elapsed_time % 3600) / 60))

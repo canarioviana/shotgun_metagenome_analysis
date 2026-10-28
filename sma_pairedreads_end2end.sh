@@ -1843,7 +1843,7 @@ if [ "$sample_count" -eq 0 ]; then
     exit 1
 fi
 
-# Fail fast if the k-mer distribution for this database and read length (-r 100) is missing
+# Fail fast if the k-mer distribution for this database and read length (-r 150) is missing
 kmer_distrib="${kraken_db}/database100mers.kmer_distrib"
 if [ ! -s "$kmer_distrib" ]; then
     echo "✗ ERROR — ${workflow_step}: ${kmer_distrib} not found." | tee -a 0_workflow_progress.txt
@@ -1889,7 +1889,7 @@ for file in "${reports[@]}"; do
         -i "$file" \
         -w "${output_file}.tmp" \
         -o "${bracken_file}.tmp" \
-        -r 100 \
+        -r 150 \
         -l S \
         -t 0
 

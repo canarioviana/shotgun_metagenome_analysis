@@ -4,7 +4,7 @@
 # Script for metagenomic analysis of the gut microbiome from non-human primates
 # This script is under development
 # Author: Marcus V. C. Viana
-# Date: 27/10/2026
+# Date: 28/10/2026
 
 
 ############################################################
@@ -1618,20 +1618,23 @@ echo -e "■■■  ${workflow_step} finished @ $(date +'%Y-%m-%d %H:%M:%S') —
 ############################################################
 
 ############################################################
-## 6.1) Kraken
+## 6.1) 
 
 # Avoid literal glob pattern
 shopt -s nullglob
 
 # Software name for tracking progress in 0_workflow_progress.txt
-workflow_step="6) Kraken"
+workflow_step="6) "
 # Update the file 0_workflow_progress.txt
 echo "▶▶▶  ${workflow_step} started @ $(date +'%Y-%m-%d %H:%M:%S') ▶▶▶" | tee -a 0_workflow_progress.txt
 # Start counting the running time
 start_time=$SECONDS
 
-# Kraken2 database (full PlusPF ~111 GB; use a capped DB on machines with less RAM)
+# Database (full PlusPF ~111 GB; use a capped DB on machines with less RAM)
 kraken_db="/db/kraken/k2_pluspf_20260626"
+
+# Read size
+read_size=150
 
 # Split threads: leave one core free, give a few to pigz, the rest to kraken2
 pigz_threads=4
@@ -1814,6 +1817,9 @@ start_time=$SECONDS
 # Kraken2 database: must be the SAME database used in step 6.1 (Bracken uses its k-mer distribution)
 kraken_db="/db/kraken/k2_pluspf_20260626"
 
+# Read size
+read_size=150
+
 # Restore kraken reports if a previous run already deleted them (step 6.2 deletes them at the end)
 if [ ! -d "6_kraken_report" ] && [ -f "6_kraken_report.tar.gz" ] && [ -f "6_kraken_report.tar.gz.md5" ] \
     && md5sum -c "6_kraken_report.tar.gz.md5" >/dev/null 2>&1; then
@@ -1889,7 +1895,7 @@ for file in "${reports[@]}"; do
         -i "$file" \
         -w "${output_file}.tmp" \
         -o "${bracken_file}.tmp" \
-        -r 150 \
+        -r "$read_size" \
         -l S \
         -t 0
 

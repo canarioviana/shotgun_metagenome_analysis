@@ -449,6 +449,11 @@ conda create -n pyrodigal -c bioconda pyrodigal -y
 conda create -n quast -c bioconda quast -y
 
 ############################################################
+# Salmon (tested version: 2.11.0)
+# https://github.com/COMBINE-lab/salmon
+conda create -n salmon -c bioconda -c conda-forge salmon -y
+
+############################################################
 # SemiBin (tested version: 2.4.1)
 # https://github.com/BigDataBiology/SemiBin
 # No support to GPU

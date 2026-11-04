@@ -5,7 +5,7 @@
 # This file uses the .sh extension only to enable Bash syntax highlighting in text editors.
 #
 # Author: Marcus Vinicius Canário Viana
-# Date: 25/08/2026
+# Date: 04/11/2026
 # More info: see README.md in the repository
 
 
@@ -274,6 +274,18 @@ cd /db/dbcan
 for file in *.hmm; do
 	hmmpress $file
 done
+
+############################################################
+# Diamond (tested version: 2.2.8)
+# https://github.com/bbuchfink/diamond
+conda create -n diamond -c bioconda diamond -y
+mkdir /db/vfdb_full/
+cd /db/vfdb_full/
+wget https://www.mgc.ac.cn/VFs/Down/VFDB_setB_pro.fas.gz -O /db/vfdb_full/VFDB_setB_pro.fas.gz
+gunzip -c /db/vfdb_full/VFDB_setB_pro.fas.gz > /db/vfdb_full/VFDB_setB_pro.fas
+conda activate diamond
+diamond makedb --in /db/vfdb_full/VFDB_setB_pro.fas -d /db/vfdb_full/vfdb_full.dmnd
+conda deactivate
 
 ############################################################
 # eggNOG-mapper (tested version: 2.1.9, database v5.0.2)

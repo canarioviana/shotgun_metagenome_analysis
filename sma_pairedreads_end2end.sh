@@ -4,7 +4,7 @@
 # Script for metagenomic analysis of the gut microbiome from non-human primates
 # This script is under development
 # Author: Marcus V. C. Viana
-# Date: 28/10/2026
+# Date: 04/11/2026
 
 
 ############################################################
@@ -1337,7 +1337,7 @@ while IFS=$'\t' read -r sample ref_accession ref_name isolation_source others; d
         "$r2_input_file" \
         2> "5_bwa_reads/${sample}_alignment.log" \
         | tee >(samtools flagstat - > "5_bwa_reads/${sample}_nofilter_flagstat.txt") \
-        | samtools view -h -b -f 4 -@ $(nproc --ignore=1) - \
+        | samtools view -h -b -f 12 -@ $(nproc --ignore=1) - \
         | tee >(samtools flagstat - > "5_bwa_reads/${sample}_hostfilter_flagstat.txt") \
         | samtools sort -n -T "$sort_tmp_prefix" -@ $(nproc --ignore=1) - \
         | samtools fastq -c 6 \

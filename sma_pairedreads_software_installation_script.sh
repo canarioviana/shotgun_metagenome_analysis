@@ -5,14 +5,14 @@
 # This file uses the .sh extension only to enable Bash syntax highlighting in text editors.
 #
 # Author: Marcus Vinicius Canário Viana
-# Date: 04/11/2026
+# Date: 07/11/2026
 # More info: see README.md in the repository
 
 
 # Summary
 # A) System requirements
 # B) Software installation
-# B.1) Software installation - Miniconda
+# B.1) Software installation - Miniforge
 # B.2) Software installation - Metagenomic workflow
 # C) Connecting to a server and using Screen
 
@@ -36,133 +36,77 @@
 ############################################################
 
 ############################################################
-# Miniconda (For a single user. Local computer.)
-# Download the installer
+# Option 1 - Miniforge for a single user. Local computer.
+
+# Download and install in batch mode (no prompts) to /home/$USER/miniforge3
 cd
-wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-sh Miniconda3-latest-Linux-x87_64.sh
-# Follow the instructions to install Miniconda in /home/$USER/miniconda3
+wget "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
+bash Miniforge3-$(uname)-$(uname -m).sh -b -p ~/miniforge3
 
-# Do you accept the license terms? [yes|no]
-# >>> yes
-
-# Miniconda3 will now be installed into this location:
-# /root/miniconda3
-#
-#   - Press ENTER to confirm the location
-#   - Press CTRL-C to abort the installation
-#   - Or specify a different location below
-#
-# [/home/user_name/miniconda3] >>>
-
-# Do you wish to update your shell profile to automatically initialize conda?
-# This will activate conda on startup and change the command prompt when activated.
-# If you'd prefer that conda's base environment not be activated on startup,
-#    run the following command when conda is activated:
-
-# conda config --set auto_activate_base false
-
-# You can undo this by running `conda init --reverse $SHELL`? [yes|no]
-# [no] >>> yes
-
-# Apply changes in current session
+# Initialize conda in ~/.bashrc and apply changes in the current session
+~/miniforge3/bin/conda init bash
 source ~/.bashrc
 # Now, "(base)" should appear in the terminal before the user name
-# Add Conda channels
-conda config --show channels
-conda config --add channels conda-forge
+
+# Conda channel config (Order matters: the last --add goes to the top)
 conda config --add channels bioconda
-conda config --add channels defaults
-conda config --add channels anaconda
-conda config --add channels r
-conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
-conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
-# Set libmamba as enviroment solver. It is faster than the classic solver
-conda config --set solver libmamba
-# Update Miniconda
-conda update conda -y # If the message "Terms of Service have not been accepted" appears, execute the command lines shown in the message and try this command again.
-# Show Conda configuration
+conda config --add channels conda-forge
+conda config --set channel_priority strict
+
+# Update Miniforge
+conda update -n base --all -y
+
+# Show Conda configuration (only conda-forge and bioconda should be listed)
 conda config --show-sources
 
 # Directory for databases
 # Create the directory "db" for the databases in the disk root
 sudo mkdir /db
-# OR create a softlink "/db" for the databases directory located in anoter place
-cd /
-sudo ln -s /path/to/real/database/directory/db db
-# Change the directory owner and group to the current user. This is required to download databases later.
-sudo chown $USER /db
-sudo chgrp $USER /db
+# OR create a softlink "/db" for the databases directory located in another place
+sudo ln -s /path/to/real/database/directory/db /db
+# Give ownership to the current user (required to download databases later).
+# If /db is a symlink, chown changes the real directory it points to.
+sudo chown $USER:$USER /db
 
 ############################################################
-# Miniconda (For all users. Server computer.)
-# Log in as root
+# Option 2 - Miniforge for all users. Server computer.
 sudo su
 cd
-# Download the installer
-wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-sh Miniconda3-latest-Linux-x87_64.sh
-# Follow the instructions and install Miniconda in /usr/local/miniconda3
 
-# Do you accept the license terms? [yes|no]
-# >>> yes
+# Download and install in batch mode (no prompts) to /usr/local/miniforge3
+wget "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
+bash Miniforge3-$(uname)-$(uname -m).sh -b -p /usr/local/miniforge3
 
-# Miniconda3 will now be installed into this location:
-# /root/miniconda3
-#
-#   - Press ENTER to confirm the location
-#   - Press CTRL-C to abort the installation
-#   - Or specify a different location below
-#
-# [/root/miniconda3] >>> /usr/local/miniconda3
-
-# Do you wish to update your shell profile to automatically initialize conda?
-# This will activate conda on startup and change the command prompt when activated.
-# If you'd prefer that conda's base environment not be activated on startup,
-#    run the following command when conda is activated:
-
-# conda config --set auto_activate_base false
-
-# You can undo this by running `conda init --reverse $SHELL`? [yes|no]
-# [no] >>> yes
-
-# Apply changes in the current session
+# Initialize conda for root and load it in the current session
+/usr/local/miniforge3/bin/conda init bash
 source ~/.bashrc
-# Now, "(base)" should appear in the terminal before "root¨
-# Add Conda channels
-conda config --show channels
-conda config --add channels r
-conda config --add channels conda-forge
-conda config --add channels anaconda
-conda config --add channels bioconda
-conda config --add channels defaults
-conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
-conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
-# Set libmamba as enviroment solver. It is faster than the classic solver
-conda config --set solver libmamba
-# Update Miniconda
-conda update conda -y
-# Show Conda configuration
+
+# System-wide channel config (written to /usr/local/miniforge3/.condarc, applies to all users)
+# Order matters: the last --add goes to the top
+conda config --system --add channels bioconda
+conda config --system --add channels conda-forge
+conda config --system --set channel_priority strict
 conda config --show-sources
-# Create a simbolic link for all users
-ln -s /usr/local/miniconda3/bin/conda /usr/bin/conda
-# Log out as root
+
+# Update Miniforge
+conda update -n base conda -y
+
+# Make conda available to all users
+ln -s /usr/local/miniforge3/condabin/conda /usr/bin/conda
 exit
 
-# For each user, execute this command only once to add Conda.
-conda init # To write Conda information to ~/.bashrc
-# Apply changes in the current session
+# For each user, run once
+conda init bash
 source ~/.bashrc
 # Now, "(base)" should appear in the terminal before the username.
 
-# ⚠️ IMPORTANT! Log in as root before creating a Conda environment to make it available to all users.
+# ⚠️ IMPORTANT: create environments as root to make them available to all users
 
 # Directory for databases
 # Create the directory "db" for the databases in the disk root
 sudo mkdir /db
-# OR create a softlink "/db" for the databases directory located in anoter place
-cd /
-sudo ln -s /path/to/real/database/directory/db db
+# OR create a softlink "/db" for the databases directory located in another place
+sudo ln -s /path/to/real/database/directory/db /db
 
 # After download a database in /db/, give all users the permission to access the directories
 # Give to all users the permission to read databases directories (+x is necessary for directories) 

@@ -182,7 +182,7 @@ conda create -n aragorn -c bioconda aragorn -y
 conda create -n bwa-mem2 -c bioconda -c conda-forge bwa-mem2 samtools -y
 
 ############################################################
-# CheckM2 (tested version: 1.0.2, database uniref100.KO.1.dmnd)
+# CheckM2 (tested version: 1.1.0, database uniref100.KO.1.dmnd)
 # https://github.com/chklovski/CheckM2
 cd
 git clone --recursive https://github.com/chklovski/checkm2.git

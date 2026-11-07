@@ -4,7 +4,7 @@
 # Script for metagenomic analysis of the gut microbiome from non-human primates
 # This script is under development
 # Author: Marcus V. C. Viana
-# Date: 04/11/2026
+# Date: 07/11/2026
 
 
 ############################################################
@@ -138,7 +138,7 @@
 set -e
 
 # Ensure that a pipeline (command1 | command2) fails if any command in the pipe fails
-set -o pipefail
+set pipefail
 
 ############################################################
 ## Check if the 'conda' command is available on the system PATH
@@ -496,7 +496,7 @@ else
     # Activate Conda environment
     conda activate fastqc
     # Run main software
-    fastqc -t $(nproc --ignore=1) "${reads_files[@]}" -o 2_fastqc
+    fastqc -t $(nproc --ignore=1) "${reads_files[@]}" --outdir 2_fastqc
     # Deactivate Conda environment
     conda deactivate
 
@@ -1448,7 +1448,7 @@ else
     # Activate Conda environment
     conda activate fastqc
     # Run main software
-    fastqc -t 4 "${reads_files[@]}" -o 5_bwa_reads_fastqc
+    fastqc -t 4 "${reads_files[@]}" --outdir 5_bwa_reads_fastqc
     # Deactivate Conda environment
     conda deactivate
 
